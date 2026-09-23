@@ -13,6 +13,9 @@ IMG_SURFACE = os.path.join(ASSETS_DIR, "demo_surface_waves.png")
 IMG_THERMO = os.path.join(ASSETS_DIR, "demo_thermal_curtain.png")
 IMG_DEPTH = os.path.join(ASSETS_DIR, "demo_depth_probe.png")
 IMG_FLOOR = os.path.join(ASSETS_DIR, "demo_thermal_floor.png")
+IMG_NASA = os.path.join(ASSETS_DIR, "nasa_logo.png")
+IMG_COPERNICUS = os.path.join(ASSETS_DIR, "copernicus_logo.png")
+IMG_PARAVIEW = os.path.join(ASSETS_DIR, "paraview_logo.png")
 
 # Palette aligned with SIH official template & Ocean theme
 NAVY = RGBColor(0x0A, 0x1E, 0x33)
@@ -230,37 +233,107 @@ c1_y = 1.58
 # Card 1 (Left Top): The Real Problem & Operational Pain Points (Coral)
 c1_h = 2.45
 c1 = add_card(s2, 0.50, c1_y, col_w, c1_h, fill=WHITE, border=CORAL, border_w=Pt(1.2), radius=0.08)
-tf1 = c1.text_frame; tf1.word_wrap = True; tf1.margin_left = Inches(0.12); tf1.margin_top = Inches(0.08)
-p1 = tf1.paragraphs[0]
-r = p1.add_run(); r.text = "1. THE REAL PROBLEM & PAIN POINTS (Why Current Systems Fail)\n"; r.font.bold = True; r.font.size = Pt(9.5); r.font.color.rgb = CORAL
 
+# Header Pill
+h1 = create_shape(s2, 5, 0.58, c1_y + 0.08, col_w - 0.16, 0.28, fill=CARD_CORAL, line_color=CORAL, line_width=Pt(0.8), radius=0.2)
+set_shape_text(h1, "1. THE REAL PROBLEM & PAIN POINTS (Why Current Workflows Fail)", size=8.5, bold=True, color=CORAL)
+
+# Systemic Workflow Bottleneck Mini-Flowchart (3 Nodes + 2 Red Barriers)
+fl_y = c1_y + 0.40
+fl_nw = 1.56
+fl_nh = 0.52
+fl_bw = 0.42
+
+# Node 1
+n1 = create_shape(s2, 5, 0.60, fl_y, fl_nw, fl_nh, fill=CARD_BG, line_color=TEAL, line_width=Pt(1), radius=0.12)
+set_shape_text(n1, "📡 1. NetCDF Influx\n15+ GB Daily Files", size=7.2, bold=True, color=NAVY)
+
+# Barrier 1
+b1 = create_shape(s2, 5, 0.60 + fl_nw + 0.05, fl_y + 0.08, fl_bw, 0.36, fill=CORAL, line_color=None, radius=0.2)
+set_shape_text(b1, "❌\nLag", size=6.5, bold=True, color=WHITE)
+
+# Node 2
+n2 = create_shape(s2, 5, 0.60 + fl_nw + fl_bw + 0.10, fl_y, fl_nw, fl_nh, fill=CARD_BG, line_color=AMBER, line_width=Pt(1), radius=0.12)
+set_shape_text(n2, "🖥️ 2. Desktop Wall\nPanoply / 2D PDF", size=7.2, bold=True, color=NAVY)
+
+# Barrier 2
+b2 = create_shape(s2, 5, 0.60 + 2*fl_nw + fl_bw + 0.15, fl_y + 0.08, fl_bw, 0.36, fill=CORAL, line_color=None, radius=0.2)
+set_shape_text(b2, "❌\n2D", size=6.5, bold=True, color=WHITE)
+
+# Node 3
+n3 = create_shape(s2, 5, 0.60 + 2*fl_nw + 2*fl_bw + 0.20, fl_y, fl_nw, fl_nh, fill=CARD_BG, line_color=CORAL, line_width=Pt(1), radius=0.12)
+set_shape_text(n3, "🚢 3. Fleet Blindspot\nZero 3D at Sea", size=7.2, bold=True, color=NAVY)
+
+# Bullets below flowchart
 bullets_c1 = [
-    ("• 15 GB NetCDF Data Silos: ", "Massive multi-gigabyte models choke marine satellite bandwidth ($50,000+ over VSAT), isolating frontline ships at sea."),
+    ("• 15 GB NetCDF Data Silos: ", "Massive multi-gigabyte models choke marine satellite VSAT ($50,000+/mo), isolating frontline ships at sea."),
     ("• 2D Flat Slicing Bottleneck: ", "Static 2D charts completely hide continuous 0m–500m thermocline gradients, acoustic shadow zones, and internal wave shear."),
     ("• Disconnected In-Situ Data: ", "Numerical forecast grids and physical sensor observations (ARGO floats, buoys) remain trapped in separate siloed tools.")
 ]
-for b_h, b_t in bullets_c1:
-    p = tf1.add_paragraph(); p.space_after = Pt(2)
-    r1 = p.add_run(); r1.text = b_h; r1.font.bold = True; r1.font.size = Pt(8.0); r1.font.color.rgb = NAVY
-    r2 = p.add_run(); r2.text = b_t; r2.font.size = Pt(7.8); r2.font.color.rgb = MIDTEXT
+tf1_b = add_text_box(s2, "", 0.58, fl_y + fl_nh + 0.06, col_w - 0.16, 1.35).text_frame
+tf1_b.word_wrap = True
+tf1_b.margin_left = Inches(0.02); tf1_b.margin_top = Inches(0.02)
+for bi, (b_h, b_t) in enumerate(bullets_c1):
+    p = tf1_b.add_paragraph() if bi > 0 else tf1_b.paragraphs[0]
+    p.space_after = Pt(2)
+    r1 = p.add_run(); r1.text = b_h; r1.font.bold = True; r1.font.size = Pt(7.8); r1.font.color.rgb = NAVY
+    r2 = p.add_run(); r2.text = b_t; r2.font.size = Pt(7.5); r2.font.color.rgb = MIDTEXT
 
-# Card 2 (Left Bottom): Drawbacks of Current Tools & Websites (Amber)
+# Card 2 (Left Bottom): Drawbacks of Current Tools & Websites with Logos (Amber)
 c2_y = c1_y + c1_h + 0.12
 c2_h = 2.65
 c2 = add_card(s2, 0.50, c2_y, col_w, c2_h, fill=WHITE, border=AMBER, border_w=Pt(1.2), radius=0.08)
-tf2 = c2.text_frame; tf2.word_wrap = True; tf2.margin_left = Inches(0.12); tf2.margin_top = Inches(0.08)
-p2 = tf2.paragraphs[0]
-r = p2.add_run(); r.text = "2. DRAWBACKS OF CURRENT TOOLS & WEBSITES (Why Existing Tools Fall Short)\n"; r.font.bold = True; r.font.size = Pt(9.5); r.font.color.rgb = AMBER
 
-bullets_c2 = [
-    ("• NASA Panoply (NASA GISS): ", "Desktop-only Java app; static 2D planar contour plots; zero 3D volumetric raymarching; no real-time telemetry; zero web sharing."),
-    ("• Copernicus MyOcean (EU CMEMS): ", "Pseudo-2.5D surface globe; lacks true continuous depth slicing; heavy network latency; disconnected from live in-situ buoys."),
-    ("• ParaView / VisIt / ArcGIS 3D: ", "Exorbitant ₹15L–₹40L licenses; demands dedicated ₹5L GPU workstations; complex academic UI; unviable for field bridge laptops.")
+# Header Pill
+h2 = create_shape(s2, 5, 0.58, c2_y + 0.08, col_w - 0.16, 0.28, fill=CARD_AMBER, line_color=AMBER, line_width=Pt(0.8), radius=0.2)
+set_shape_text(h2, "2. DRAWBACKS OF CURRENT TOOLS & WEBSITES (BENCHMARK)", size=8.5, bold=True, color=AMBER)
+
+# 3 Tool Cards Side-by-Side with Logos
+tool_data = [
+    ("NASA Panoply", "USA · NASA GSFC", IMG_NASA, [
+        ("Platform", "Desktop (Java JRE)"),
+        ("Slices", "2D Planar Contours"),
+        ("Audience", "Ocean Scientists")
+    ], "⚠️ Desktop / No 3D Web", CORAL),
+
+    ("Copernicus MyOcean", "EU · Mercator Ocean", IMG_COPERNICUS, [
+        ("Platform", "Web GIS (2D Map)"),
+        ("Slices", "2.5D Surface Globe"),
+        ("Audience", "Policy Researchers")
+    ], "⚠️ Surface Only / No Depth", AMBER),
+
+    ("ParaView / VisIt", "Global · Kitware HPC", IMG_PARAVIEW, [
+        ("Platform", "HPC Workstation"),
+        ("Slices", "Full 3D Volume"),
+        ("Audience", "Supercomputing Pros")
+    ], "⚠️ Demands ₹5L GPU Rig", CORAL)
 ]
-for b_h, b_t in bullets_c2:
-    p = tf2.add_paragraph(); p.space_after = Pt(2)
-    r1 = p.add_run(); r1.text = b_h; r1.font.bold = True; r1.font.size = Pt(8.0); r1.font.color.rgb = NAVY
-    r2 = p.add_run(); r2.text = b_t; r2.font.size = Pt(7.8); r2.font.color.rgb = MIDTEXT
+
+tc_w = (col_w - 0.40) / 3.0
+tc_y = c2_y + 0.40
+tc_h = 2.14
+
+for ti, (t_name, t_origin, t_logo, t_specs, t_verdict, t_vcol) in enumerate(tool_data):
+    tx = 0.58 + ti * (tc_w + 0.10)
+    tc_box = create_shape(s2, 5, tx, tc_y, tc_w, tc_h, fill=CARD_BG, line_color=BORDER_LT, line_width=Pt(0.8), radius=0.08)
+    
+    # Logo Well
+    lw_h = 0.42
+    l_well = create_shape(s2, 5, tx + 0.08, tc_y + 0.06, tc_w - 0.16, lw_h, fill=WHITE, line_color=BORDER_LT, line_width=Pt(0.6), radius=0.06)
+    if os.path.exists(t_logo):
+        add_fitted_picture(s2, t_logo, tx + 0.08, tc_y + 0.06, tc_w - 0.16, lw_h, pad_x=0.04, pad_y=0.03)
+    
+    # Tool Name & Origin
+    add_text_box(s2, t_name, tx + 0.04, tc_y + lw_h + 0.08, tc_w - 0.08, 0.22, size=7.8, bold=True, color=NAVY, align=PP_ALIGN.CENTER)
+    add_text_box(s2, t_origin, tx + 0.04, tc_y + lw_h + 0.28, tc_w - 0.08, 0.18, size=6.2, bold=False, color=MUTED, align=PP_ALIGN.CENTER)
+    
+    # Specs
+    spec_txt = "\n".join([f"• {k}: {v}" for k, v in t_specs])
+    add_text_box(s2, spec_txt, tx + 0.06, tc_y + lw_h + 0.46, tc_w - 0.12, 0.75, size=6.8, color=MIDTEXT)
+    
+    # Verdict Pill
+    v_pill = create_shape(s2, 5, tx + 0.06, tc_y + tc_h - 0.30, tc_w - 0.12, 0.24, fill=t_vcol, line_color=None, radius=0.25)
+    set_shape_text(v_pill, t_verdict, size=6.5, bold=True, color=WHITE)
 
 # Right Column: Solution, Innovation & Prototype Showcase
 col_r_x = 6.80
@@ -269,9 +342,10 @@ col_r_w = 6.03
 # Card 3 (Right Top): Proposed Solution & Innovation (Cyan)
 c3_h = 2.45
 c3 = add_card(s2, col_r_x, c1_y, col_r_w, c3_h, fill=WHITE, border=CYAN, border_w=Pt(1.2), radius=0.08)
-tf3 = c3.text_frame; tf3.word_wrap = True; tf3.margin_left = Inches(0.12); tf3.margin_top = Inches(0.08)
-p3 = tf3.paragraphs[0]
-r = p3.add_run(); r.text = "3. PROPOSED SOLUTION & INNOVATION (OceanSight 3D — Global First)\n"; r.font.bold = True; r.font.size = Pt(9.5); r.font.color.rgb = CYAN
+
+# Header Pill
+h3 = create_shape(s2, 5, col_r_x + 0.10, c1_y + 0.08, col_r_w - 0.20, 0.28, fill=CARD_BLUE, line_color=CYAN, line_width=Pt(0.8), radius=0.2)
+set_shape_text(h3, "3. PROPOSED SOLUTION & INNOVATION (OceanSight 3D — Global First)", size=8.5, bold=True, color=NAVY)
 
 bullets_c3 = [
     ("• Cloud-Native Zarr Streaming: ", "99.9% bandwidth cut (15 GB ➔ 10 KB on-demand binary slices over standard 4G or marine VSAT)."),
@@ -279,8 +353,12 @@ bullets_c3 = [
     ("• Continuous 0m–500m Slicing: ", "Exposes real-time thermocline gradients, acoustic shadow zones, and SOFAR sound channels."),
     ("★ Global First Innovation: ", "World's first web platform combining numerical ocean physics (ROMS/WW3), Gerstner wave displacement, and live ARGO floats.")
 ]
-for b_h, b_t in bullets_c3:
-    p = tf3.add_paragraph(); p.space_after = Pt(2)
+tf3_b = add_text_box(s2, "", col_r_x + 0.10, c1_y + 0.40, col_r_w - 0.20, 1.95).text_frame
+tf3_b.word_wrap = True
+tf3_b.margin_left = Inches(0.02); tf3_b.margin_top = Inches(0.02)
+for bi, (b_h, b_t) in enumerate(bullets_c3):
+    p = tf3_b.add_paragraph() if bi > 0 else tf3_b.paragraphs[0]
+    p.space_after = Pt(2)
     r1 = p.add_run(); r1.text = b_h; r1.font.bold = True; r1.font.size = Pt(8.0); r1.font.color.rgb = NAVY
     r2 = p.add_run(); r2.text = b_t; r2.font.size = Pt(7.8); r2.font.color.rgb = MIDTEXT
 
