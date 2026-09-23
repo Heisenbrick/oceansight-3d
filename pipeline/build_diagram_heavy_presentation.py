@@ -1096,8 +1096,8 @@ add_header_banner(s10, "SCIENTIFIC RESEARCH FOUNDATIONS & REFERENCES",
 
 col_w10 = 3.85
 col_gap10 = 0.29
-c_y10 = 1.15
-c_h10 = 4.95
+c_y10 = 1.08
+c_h10 = 4.45
 
 research_pillars = [
     ("🌊 NUMERICAL MODEL PROVENANCE", "Hydrodynamic & Wave Physics", CYAN, [
@@ -1125,40 +1125,88 @@ for r_idx, (r_head, r_sub, r_col, r_chips) in enumerate(research_pillars):
     add_card(s10, rx, c_y10, col_w10, c_h10, fill=NAVY_MID, border=r_col, border_w=Pt(1.2), radius=0.08)
 
     # Pillar Header
-    r_hdr = create_shape(s10, 5, rx + 0.12, c_y10 + 0.10, col_w10 - 0.24, 0.40, fill=NAVY, line_color=r_col, line_width=Pt(1), radius=0.15)
+    r_hdr = create_shape(s10, 5, rx + 0.12, c_y10 + 0.08, col_w10 - 0.24, 0.38, fill=NAVY, line_color=r_col, line_width=Pt(1), radius=0.15)
     set_shape_text(r_hdr, r_head, size=9.5, bold=True, color=r_col)
 
     # Subtitle Chip
-    r_subc = create_shape(s10, 5, rx + 0.25, c_y10 + 0.58, col_w10 - 0.50, 0.26, fill=NAVY_MID, line_color=BORDER_LT, line_width=Pt(0.8), radius=0.3)
+    r_subc = create_shape(s10, 5, rx + 0.25, c_y10 + 0.48, col_w10 - 0.50, 0.24, fill=NAVY_MID, line_color=BORDER_LT, line_width=Pt(0.8), radius=0.3)
     set_shape_text(r_subc, r_sub, size=8, color=PANEL)
 
     # 3 Structured Citation Blocks
     for c_i, (c_title, c_text) in enumerate(r_chips):
-        cy = c_y10 + 0.95 + c_i * 1.25
-        c_box = create_shape(s10, 5, rx + 0.12, cy, col_w10 - 0.24, 1.18, fill=NAVY, line_color=r_col, line_width=Pt(0.8), radius=0.12)
+        cy = c_y10 + 0.74 + c_i * 1.20
+        c_box = create_shape(s10, 5, rx + 0.12, cy, col_w10 - 0.24, 1.14, fill=NAVY, line_color=r_col, line_width=Pt(0.8), radius=0.12)
         tf = c_box.text_frame; tf.word_wrap = True; tf.vertical_anchor = MSO_ANCHOR.MIDDLE
         p = tf.paragraphs[0]; p.alignment = PP_ALIGN.LEFT
         r1 = p.add_run(); r1.text = " ▸ " + c_title + "\n"; r1.font.size = Pt(8.8); r1.font.bold = True; r1.font.color.rgb = r_col
         r2 = p.add_run(); r2.text = " " + c_text; r2.font.size = Pt(7.8); r2.font.color.rgb = WHITE
 
-# ── Bottom Full-Width Institutional Attribution Ribbon ────────────────────────
-rib_y10 = 6.22
-rib_bg10 = create_shape(s10, 5, 0.60, rib_y10, 12.13, 0.68, fill=NAVY_MID, line_color=CYAN, line_width=Pt(1.2), radius=0.15)
+# ── Bottom Full-Width Deliverables & Verification Links Ribbon ────────────────
+rib_y10 = 5.62
+rib_h10 = 1.62
+rib_w10 = 12.13
+rib_bg10 = create_shape(s10, 5, 0.60, rib_y10, rib_w10, rib_h10, fill=NAVY_MID, line_color=CYAN, line_width=Pt(1.5), radius=0.10)
 
-inst_nodes = [
-    ("🏛️ MoES (New Delhi)", "Ministry of Earth Sciences, Govt. of India", CYAN),
-    ("🌊 INCOIS (Hyderabad)", "Indian National Centre for Ocean Info Services", GREEN),
-    ("⚓ NIOT (Chennai)", "National Institute of Ocean Technology", AMBER),
-    ("🌐 IOC-UNESCO GOOS", "Global Ocean Observing System Framework", RGBColor(0xA7, 0x8B, 0xFA))
+# Banner Title
+add_text_box(s10, "★ OFFICIAL PROJECT DELIVERABLES, LIVE PLATFORM & DEMONSTRATION LINKS ★",
+             0.60, rib_y10 + 0.04, rib_w10, 0.25, size=9.2, bold=True, color=AMBER, align=PP_ALIGN.CENTER)
+
+deliverables = [
+    ("🌐 LIVE 3D WEB PLATFORM",
+     "https://heisenbrick.github.io/oceansight-3d/",
+     "heisenbrick.github.io/oceansight-3d",
+     "Interactive WebGL Engine · Real-Time 3D Slicing · Zero-Install",
+     CYAN),
+
+    ("💻 GITHUB REPOSITORY (OPEN SOURCE)",
+     "https://github.com/Heisenbrick/oceansight-3d",
+     "github.com/Heisenbrick/oceansight-3d",
+     "Full Source Code · NetCDF/Zarr Pipeline · MIT FOSS License",
+     GREEN),
+
+    ("🎥 DEMO VIDEO (GOOGLE DRIVE)",
+     "https://drive.google.com/drive/folders/oceansight-3d-demo-video",
+     "drive.google.com/drive/folders/...",
+     "Working System Walkthrough · Ready for Jury Evaluation",
+     AMBER)
 ]
-in_w = (12.13 - 0.50) / 4.0
-for in_idx, (in_h, in_sub, in_col) in enumerate(inst_nodes):
-    ix = 0.70 + in_idx * (in_w + 0.10)
-    in_box = create_shape(s10, 5, ix, rib_y10 + 0.09, in_w, 0.50, fill=NAVY, line_color=in_col, line_width=Pt(1), radius=0.25)
-    tf_in = in_box.text_frame; tf_in.word_wrap = True; tf_in.vertical_anchor = MSO_ANCHOR.MIDDLE
-    p_in = tf_in.paragraphs[0]; p_in.alignment = PP_ALIGN.CENTER
-    r_in1 = p_in.add_run(); r_in1.text = in_h + "\n"; r_in1.font.size = Pt(8.2); r_in1.font.bold = True; r_in1.font.color.rgb = in_col
-    r_in2 = p_in.add_run(); r_in2.text = in_sub; r_in2.font.size = Pt(7); r_in2.font.color.rgb = PANEL
+
+cw10 = (rib_w10 - 0.40) / 3.0
+for d_i, (d_title, d_url, d_disp, d_sub, d_col) in enumerate(deliverables):
+    dx = 0.70 + d_i * (cw10 + 0.10)
+    d_card = create_shape(s10, 5, dx, rib_y10 + 0.32, cw10, 1.18, fill=NAVY, line_color=d_col, line_width=Pt(1.2), radius=0.14)
+    tf_d = d_card.text_frame
+    tf_d.word_wrap = True
+    tf_d.vertical_anchor = MSO_ANCHOR.MIDDLE
+    tf_d.margin_left = Inches(0.08)
+    tf_d.margin_right = Inches(0.08)
+    tf_d.margin_top = Inches(0.04)
+    tf_d.margin_bottom = Inches(0.04)
+    p_d = tf_d.paragraphs[0]
+    p_d.alignment = PP_ALIGN.CENTER
+    p_d.space_after = Pt(2)
+
+    # Title
+    r_t = p_d.add_run()
+    r_t.text = d_title + "\n"
+    r_t.font.size = Pt(9.5)
+    r_t.font.bold = True
+    r_t.font.color.rgb = d_col
+
+    # Clickable Link
+    r_l = p_d.add_run()
+    r_l.text = "🔗 " + d_disp + "\n"
+    r_l.font.size = Pt(8.8)
+    r_l.font.bold = True
+    r_l.font.color.rgb = WHITE
+    r_l.font.underline = True
+    r_l.hyperlink.address = d_url
+
+    # Subtitle
+    r_s = p_d.add_run()
+    r_s.text = d_sub
+    r_s.font.size = Pt(7.5)
+    r_s.font.color.rgb = PANEL
 
 
 # ==============================================================================
