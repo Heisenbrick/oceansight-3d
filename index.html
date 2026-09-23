@@ -1,0 +1,1685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>OceanSight 3D - SIH26067 | INCOIS</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#060e1a;--panel:rgba(13,27,49,.82);--border:rgba(56,189,248,.2);--glow:rgba(56,189,248,.5);
+  --primary:#38bdf8;--pdim:rgba(56,189,248,.14);--amber:#f59e0b;--coral:#f43f5e;--green:#10b981;
+  --txt:#f1f5f9;--muted:#94a3b8;--dim:#475569;
+}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--txt);
+  font-family:"Plus Jakarta Sans",sans-serif;-webkit-font-smoothing:antialiased}
+#c{position:fixed;inset:0;display:block;z-index:0}
+#ls{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:18px;transition:opacity .8s}
+.lt{font-size:26px;font-weight:700;letter-spacing:.2em;color:var(--primary);text-shadow:0 0 40px rgba(56,189,248,.6)}
+.ls2{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--muted);letter-spacing:.14em}
+.lbt{width:260px;height:2px;background:rgba(56,189,248,.15);border-radius:99px;overflow:hidden}
+.lbf{height:100%;background:var(--primary);animation:lf 1.4s ease-out forwards}
+@keyframes lf{from{width:0}to{width:100%}}
+#hud{position:fixed;inset:0;z-index:10;pointer-events:none}
+#hud>*{pointer-events:auto}
+#hbar{position:absolute;top:0;left:0;right:0;height:50px;display:flex;align-items:center;
+  padding:0 14px;gap:12px;background:rgba(6,14,26,.9);backdrop-filter:blur(14px);border-bottom:1px solid var(--border)}
+.sbadge{font-family:"JetBrains Mono",monospace;font-size:9px;font-weight:700;color:var(--bg);
+  background:var(--primary);padding:3px 9px;border-radius:99px;letter-spacing:.08em;flex-shrink:0}
+.atitle{font-size:13px;font-weight:700;letter-spacing:.22em;flex-shrink:0}
+.atitle span{color:var(--primary)}
+.hdiv{width:1px;height:20px;background:var(--border);flex-shrink:0}
+.tstrip{display:flex;gap:16px;flex:1;overflow:hidden}
+.tc{display:flex;flex-direction:column;gap:1px;min-width:60px}
+.tl{font-family:"JetBrains Mono",monospace;font-size:7.5px;font-weight:700;color:var(--dim);letter-spacing:.14em}
+.tv{font-family:"JetBrains Mono",monospace;font-size:12px;font-weight:700;color:var(--primary)}
+.tv.am{color:var(--amber)}
+
+/* ─── Center Tactical HUD Pill ─────────────────────────────── */
+#pb{position:absolute;top:58px;left:50%;transform:translateX(-50%);background:var(--panel);
+  backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:24px;padding:6px 18px;
+  display:flex;gap:13px;align-items:center;pointer-events:none;box-shadow:0 4px 24px rgba(0,0,0,.6);z-index:100}
+.pb-badge{font-family:"JetBrains Mono",monospace;font-size:8.5px;font-weight:700;letter-spacing:.08em;
+  padding:3px 9px;border-radius:99px;background:rgba(56,189,248,.18);color:var(--primary);border:1px solid var(--border)}
+.pb-badge.dive{background:rgba(245,158,11,.18);color:var(--amber);border-color:rgba(245,158,11,.3)}
+.pb-sep{width:1px;height:16px;background:var(--border)}
+.pb-item{display:flex;flex-direction:column;gap:1px}
+.pb-lbl{font-family:"JetBrains Mono",monospace;font-size:7px;color:var(--dim);letter-spacing:.12em}
+.pb-val{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;color:var(--txt)}
+.pb-val.am{color:var(--amber)}
+.pb-val.cy{color:var(--primary)}
+.pb-layer{font-family:"JetBrains Mono",monospace;font-size:7.5px;font-weight:700;color:var(--green);
+  background:rgba(16,185,129,.14);border:1px solid rgba(16,185,129,.35);padding:2px 8px;border-radius:99px}
+
+/* ─── Unified Left Panel: Thermocline & Depth Console ───────── */
+#lp{position:absolute;top:58px;left:14px;width:296px;background:var(--panel);backdrop-filter:blur(16px);
+  border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:9px;
+  box-shadow:0 6px 30px rgba(0,0,0,.6);z-index:100;transition:width .25s}
+.lp-hdr{display:flex;align-items:center;justify-content:space-between;padding-bottom:5px;border-bottom:1px solid var(--border)}
+.lp-title{font-family:"JetBrains Mono",monospace;font-size:8.5px;font-weight:700;color:var(--primary);letter-spacing:.15em}
+.lp-badge{font-family:"JetBrains Mono",monospace;font-size:7px;color:var(--muted);background:rgba(56,189,248,.1);border:1px solid var(--border);padding:1px 6px;border-radius:99px}
+.lp-body{display:flex;gap:12px;align-items:flex-start}
+.lp-graph-col{flex:1;display:flex;flex-direction:column;gap:6px}
+#tc-canvas{width:100%;height:175px;border-radius:6px;background:rgba(6,14,26,.7);border:1px solid rgba(56,189,248,.15)}
+.lp-depth-col{width:92px;display:flex;flex-direction:column;gap:6px;align-items:stretch}
+.lp-depth-lbl{font-family:"JetBrains Mono",monospace;font-size:7.5px;font-weight:700;color:var(--dim);letter-spacing:.12em;text-align:center}
+.qb-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.qb{font-family:"JetBrains Mono",monospace;font-size:7.5px;font-weight:700;color:var(--muted);
+  background:rgba(13,27,49,.7);border:1px solid var(--border);border-radius:4px;
+  padding:4px 2px;cursor:pointer;transition:.18s;text-align:center}
+.qb:hover,.qb.act{color:var(--bg);background:var(--primary);border-color:var(--primary);box-shadow:0 0 8px rgba(56,189,248,.4)}
+.lp-slider-wrap{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:2px;padding:4px 6px;
+  background:rgba(6,14,26,.5);border:1px solid var(--border);border-radius:6px}
+#dslide{writing-mode:vertical-lr;direction:rtl;width:18px;height:116px;accent-color:var(--primary);cursor:pointer}
+.lp-slider-ticks{display:flex;flex-direction:column;justify-content:space-between;height:116px;
+  font-family:"JetBrains Mono",monospace;font-size:6.5px;color:var(--dim)}
+.aw{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:6px;
+  padding:5px 7px;font-family:"JetBrains Mono",monospace;font-size:7.5px;color:var(--amber);line-height:1.5}
+
+/* ─── Unified Right Panel: Data Layers & Integrated Colorbar ── */
+#rp{position:absolute;top:58px;right:14px;width:238px;display:flex;flex-direction:column;gap:8px;z-index:100}
+.pcard{background:var(--panel);backdrop-filter:blur(16px);border:1px solid var(--border);
+  border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px;box-shadow:0 6px 30px rgba(0,0,0,.6)}
+.pcard-hdr{display:flex;align-items:center;justify-content:space-between;padding-bottom:5px;border-bottom:1px solid var(--border)}
+.plbl{font-family:"JetBrains Mono",monospace;font-size:8.5px;font-weight:700;color:var(--primary);letter-spacing:.15em}
+.pcard-badge{font-family:"JetBrains Mono",monospace;font-size:7px;color:var(--muted);background:rgba(56,189,248,.1);border:1px solid var(--border);padding:1px 6px;border-radius:99px}
+.rp-layers-row{display:flex;gap:10px;align-items:stretch}
+.rp-toggles{flex:1;display:flex;flex-direction:column;gap:4px}
+.lbtn{display:flex;align-items:center;gap:7px;background:rgba(18,36,64,.5);border:1px solid var(--border);
+  border-radius:5px;padding:5px 8px;cursor:pointer;transition:.18s;width:100%}
+.lbtn:hover{border-color:var(--glow);background:rgba(56,189,248,.12)}
+.lbtn.act{background:rgba(56,189,248,.14);border-color:rgba(56,189,248,.4)}
+.idot{width:7px;height:7px;border-radius:50%;background:var(--dim);flex-shrink:0;transition:.2s}
+.lbtn.act .idot{box-shadow:0 0 7px currentColor}
+.ll{font-family:"JetBrains Mono",monospace;font-size:8.5px;font-weight:600;color:var(--muted);flex:1}
+.lbtn.act .ll{color:var(--txt)}
+
+/* Temperature Scale inside #rp */
+.rp-temp-scale{width:36px;display:flex;align-items:stretch;gap:4px;padding:2px 0}
+#cbt{position:relative;width:9px;height:100%;border-radius:5px;border:1px solid rgba(56,189,248,.35);box-shadow:0 0 10px rgba(0,0,0,.5);
+  background:linear-gradient(to bottom, #ff2200 0%, #ff7700 16%, #ffdd00 32%, #00e676 48%, #00b0ff 66%, #2979ff 82%, #4a148c 100%)}
+#cbn{position:absolute;left:-5px;width:19px;height:2px;background:#ffffff;box-shadow:0 0 6px #ffffff;
+  transform:translateY(-50%);top:50%;transition:top .25s;border-radius:99px;z-index:10}
+.cbls{display:flex;flex-direction:column;justify-content:space-between;height:100%;padding:1px 0}
+.cblb{font-family:"JetBrains Mono",monospace;font-size:6.5px;font-weight:600;color:var(--muted);letter-spacing:.02em}
+.cblb.warm{color:#ff6b6b;font-weight:700}
+.cblb.therm{color:var(--primary);font-weight:700}
+.cblb.cold{color:#a78bfa;font-weight:700}
+
+#dz{border:1px dashed var(--border);border-radius:6px;padding:8px;text-align:center;cursor:pointer;transition:.2s;background:rgba(6,14,26,.4)}
+#dz:hover{border-color:var(--glow);background:rgba(56,189,248,.1)}
+.dlbl{font-family:"JetBrains Mono",monospace;font-size:7.5px;color:var(--muted);line-height:1.4;margin-top:2px}
+
+/* ─── Bottom Forecast Time Console ──────────────────────────── */
+#bb{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;
+  gap:12px;background:var(--panel);backdrop-filter:blur(16px);border:1px solid var(--border);
+  border-radius:24px;padding:7px 20px;box-shadow:0 6px 30px rgba(0,0,0,.7);z-index:100}
+.bb-controls{display:flex;align-items:center;gap:5px}
+.bb-btn{background:var(--pdim);border:1px solid var(--border);border-radius:6px;color:var(--primary);
+  font-size:11px;width:26px;height:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.18s}
+.bb-btn:hover{background:var(--primary);color:var(--bg);border-color:var(--primary)}
+#tslide{flex:1;min-width:160px;accent-color:var(--primary);cursor:pointer}
+#tdisplay{font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:700;color:var(--primary);min-width:72px}
+.bb-tag{font-family:"JetBrains Mono",monospace;font-size:7.5px;font-weight:700;color:var(--muted);
+  background:rgba(56,189,248,.08);border:1px solid var(--border);padding:2px 7px;border-radius:99px}
+
+/* ─── Bottom Radar Minimap & Live Status ─────────────────────── */
+#mm{position:absolute;bottom:14px;left:14px;width:160px;background:var(--panel);backdrop-filter:blur(16px);
+  border:1px solid var(--border);border-radius:10px;padding:9px;box-shadow:0 6px 30px rgba(0,0,0,.7);z-index:100}
+.mm-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.mmt{font-family:"JetBrains Mono",monospace;font-size:7.5px;color:var(--primary);letter-spacing:.14em;font-weight:700}
+.mm-sub{font-family:"JetBrains Mono",monospace;font-size:6.5px;color:var(--dim)}
+#mmc{width:142px;height:96px;border-radius:6px;background:rgba(6,14,26,.8);border:1px solid rgba(56,189,248,.15)}
+
+#ms{position:absolute;bottom:148px;left:14px;z-index:100}
+#mst{font-family:"JetBrains Mono",monospace;font-size:8px;font-weight:700;color:var(--green);
+  background:rgba(16,185,129,.14);border:1px solid rgba(16,185,129,.35);border-radius:99px;
+  padding:4px 12px;letter-spacing:.08em;box-shadow:0 2px 14px rgba(0,0,0,.4)}
+
+#si{position:absolute;bottom:14px;right:14px;font-family:"JetBrains Mono",monospace;font-size:7.5px;
+  color:var(--muted);background:var(--panel);backdrop-filter:blur(16px);border:1px solid var(--border);
+  border-radius:10px;padding:8px 12px;line-height:1.6;pointer-events:none;text-align:right;box-shadow:0 4px 20px rgba(0,0,0,.6);z-index:100}
+
+#modal{position:fixed;inset:0;z-index:500;background:rgba(6,14,26,.8);backdrop-filter:blur(6px);
+  display:none;align-items:center;justify-content:center}
+#modal.open{display:flex}
+.mbox{background:rgba(13,27,49,.97);border:1px solid var(--glow);border-radius:12px;
+  padding:24px 28px;min-width:350px;max-width:440px}
+.mhdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.mtitle{font-size:14px;font-weight:700;color:var(--primary)}
+.mbadge{font-family:"JetBrains Mono",monospace;font-size:8px;color:var(--dim);border:1px solid var(--border);
+  border-radius:99px;padding:2px 8px;display:inline-block;margin-top:4px}
+#mcls{background:none;border:1px solid var(--border);border-radius:5px;color:var(--muted);
+  font-size:13px;width:26px;height:26px;cursor:pointer;transition:.2s}
+#mcls:hover{color:var(--coral);border-color:var(--coral)}
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px}
+.mf{display:flex;flex-direction:column;gap:2px}
+.mfl{font-family:"JetBrains Mono",monospace;font-size:7.5px;color:var(--dim);letter-spacing:.1em}
+.mfv{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:600;color:var(--txt)}
+.mfv.p{color:var(--primary)}.mfv.a{color:var(--amber)}.mfv.g{color:var(--green)}
+.msr{margin-top:12px;padding-top:11px;border-top:1px solid var(--border)}
+.schips{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
+.sch{font-family:"JetBrains Mono",monospace;font-size:7.5px;color:var(--primary);background:var(--pdim);
+  border:1px solid var(--border);border-radius:99px;padding:2px 8px}
+
+/* 2D MYOCEAN PRO OVERLAY */
+#view-switch{display:flex;background:rgba(13,27,49,.9);border:1px solid var(--border);border-radius:20px;padding:3px;gap:3px;margin-left:auto;margin-right:12px}
+.vswitch-btn{font-family:"JetBrains Mono",monospace;font-size:9px;font-weight:700;color:var(--muted);background:transparent;border:none;border-radius:14px;padding:4px 12px;cursor:pointer;transition:.2s;display:flex;align-items:center;gap:5px}
+.vswitch-btn.active{color:var(--bg);background:var(--primary);box-shadow:0 0 10px rgba(56,189,248,.4)}
+
+#map-2d-overlay{position:fixed;inset:0;z-index:5;display:flex;flex-direction:column;background:var(--bg);transition:opacity .3s,visibility .3s}
+#map-2d-overlay.hidden{opacity:0;visibility:hidden;pointer-events:none}
+#leaflet-map{width:100%;height:100%;background:#060e1a;z-index:1}
+
+/* 2D HUD OVERLAYS */
+#map2d-header{position:absolute;top:58px;left:50%;transform:translateX(-50%);z-index:1000;background:var(--panel);backdrop-filter:blur(14px);border:1px solid var(--glow);border-radius:24px;padding:8px 22px;display:flex;align-items:center;gap:18px;box-shadow:0 4px 25px rgba(0,0,0,.6)}
+.m2d-pill{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--txt);display:flex;align-items:center;gap:6px}
+.m2d-pill span{color:var(--primary);font-weight:700}
+.m2d-inst{font-family:"Plus Jakarta Sans",sans-serif;font-size:11px;color:var(--amber);background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.4);padding:4px 12px;border-radius:99px;font-weight:600}
+
+#map2d-layers{position:absolute;top:60px;right:16px;z-index:1000;background:var(--panel);backdrop-filter:blur(14px);border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px;min-width:180px;box-shadow:0 4px 25px rgba(0,0,0,.5)}
+.m2d-title{font-family:"JetBrains Mono",monospace;font-size:8.5px;font-weight:700;color:var(--primary);letter-spacing:.15em;text-transform:uppercase}
+.layer2d-toggle{display:flex;align-items:center;gap:8px;background:rgba(18,36,64,.6);border:1px solid var(--border);border-radius:6px;padding:7px 10px;cursor:pointer;transition:.2s;color:var(--txt);font-family:"JetBrains Mono",monospace;font-size:9.5px;font-weight:600}
+.layer2d-toggle.active{background:rgba(56,189,248,.18);border-color:var(--glow);color:var(--primary)}
+.layer2d-toggle .dot{width:7px;height:7px;border-radius:50%;background:var(--dim)}
+.layer2d-toggle.active .dot{background:var(--primary);box-shadow:0 0 6px var(--primary)}
+
+#map2d-action{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);z-index:1000;display:flex;align-items:center;gap:14px;background:var(--panel);backdrop-filter:blur(14px);border:1px solid var(--border);border-radius:30px;padding:8px 24px;box-shadow:0 8px 32px rgba(0,0,0,.7)}
+#btn-launch-3d{background:linear-gradient(135deg,#0284c7,#38bdf8);color:#060e1a;font-family:"Plus Jakarta Sans",sans-serif;font-size:13px;font-weight:700;letter-spacing:.04em;border:none;border-radius:20px;padding:10px 22px;cursor:pointer;display:flex;align-items:center;gap:8px;box-shadow:0 0 16px rgba(56,189,248,.5);transition:.2s}
+#btn-launch-3d:hover{transform:scale(1.03);box-shadow:0 0 24px rgba(56,189,248,.8)}
+#btn-back-to-2d{background:rgba(13,27,49,.9);border:1px solid var(--glow);color:var(--primary);font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;border-radius:20px;padding:7px 16px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:.2s}
+#btn-back-to-2d:hover{background:var(--pdim)}
+
+/* Custom Leaflet Dark overrides */
+.leaflet-container{background:#060e1a!important;font-family:"JetBrains Mono",monospace!important}
+.leaflet-popup-content-wrapper{background:rgba(13,27,49,.95)!important;backdrop-filter:blur(10px)!important;color:#f1f5f9!important;border:1px solid rgba(56,189,248,.4)!important;border-radius:8px!important;box-shadow:0 0 20px rgba(0,0,0,.8)!important}
+.leaflet-popup-tip{background:rgba(13,27,49,.95)!important}
+
+/* ─── 2D MODE: hide 3D-only HUD panels ─────────────────────── */
+.in-2d #lp{width:195px}
+.in-2d .lp-depth-col{display:none}
+.in-2d #rp{display:none}
+.in-2d #pb{display:none}
+.in-2d #bb{display:none}
+.in-2d #mm{display:none}
+.in-2d #ms{display:none}
+.in-2d #si{display:none}
+/* #lp (Thermocline Profile) stays visible in 2D — user wants it */
+
+/* ─── 2D Header: cleaner pill ───────────────────────────────── */
+#map2d-header{gap:14px;padding:7px 20px}
+.m2d-region{font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:700;color:var(--primary);display:flex;align-items:center;gap:6px}
+.m2d-divider{width:1px;height:18px;background:var(--border)}
+.m2d-vel{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--txt);display:flex;align-items:center;gap:6px}
+.m2d-vel .val{color:var(--amber);font-weight:700;font-size:12px}
+.m2d-vel .unit{color:var(--muted);font-size:8px}
+
+/* ─── In-Situ Observation Panel ─────────────────────────────── */
+#insitu-panel{position:absolute;bottom:74px;left:16px;z-index:1000;background:var(--panel);
+  backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:10px;
+  padding:11px 13px;min-width:340px;box-shadow:0 4px 28px rgba(0,0,0,.6)}
+.is-hdr{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.is-title{font-family:"JetBrains Mono",monospace;font-size:8.5px;font-weight:700;
+  color:var(--primary);letter-spacing:.16em;text-transform:uppercase}
+.is-pulse{width:7px;height:7px;border-radius:50%;background:var(--green);
+  box-shadow:0 0 8px var(--green);animation:ispulse 1.4s ease-in-out infinite;flex-shrink:0}
+@keyframes ispulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.75)}}
+.is-count{font-family:"JetBrains Mono",monospace;font-size:7.5px;color:var(--muted);margin-left:auto}
+.is-row{display:flex;align-items:center;gap:7px;padding:6px 9px;
+  background:rgba(12,24,48,.65);border:1px solid var(--border);border-radius:7px;
+  margin-bottom:5px;cursor:pointer;transition:.18s}
+.is-row:hover{border-color:var(--glow);background:rgba(56,189,248,.1)}
+.is-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.is-id{font-family:"JetBrains Mono",monospace;font-size:7.5px;font-weight:700;
+  color:var(--muted);min-width:68px}
+.is-coord{font-family:"JetBrains Mono",monospace;font-size:7.5px;color:var(--txt);flex:1}
+.is-temp{font-family:"JetBrains Mono",monospace;font-size:9.5px;font-weight:700;
+  color:var(--amber);min-width:44px}
+.is-dep{font-family:"JetBrains Mono",monospace;font-size:7.5px;color:var(--dim);min-width:36px}
+.is-stat{font-family:"JetBrains Mono",monospace;font-size:6.5px;font-weight:700;
+  padding:2px 7px;border-radius:99px}
+.is-stat.ok{color:var(--green);background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3)}
+.is-stat.tx{color:var(--amber);background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3)}
+.is-footer{display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  margin-top:8px;padding-top:7px;border-top:1px solid var(--border)}
+.is-chip{font-family:"JetBrains Mono",monospace;font-size:7px;color:var(--primary);
+  background:var(--pdim);border:1px solid var(--border);border-radius:99px;padding:2px 8px}
+.is-sync{font-family:"JetBrains Mono",monospace;font-size:7px;color:var(--muted);margin-left:auto}
+
+/* ─── Current Velocity Colorbar (2D only) ────────────────────── */
+#cur-vel-legend{position:absolute;top:60px;right:200px;z-index:1000;
+  background:var(--panel);backdrop-filter:blur(14px);
+  border:1px solid var(--border);border-radius:8px;padding:9px 11px;
+  display:flex;flex-direction:column;gap:4px;box-shadow:0 4px 20px rgba(0,0,0,.5)}
+.cvl-title{font-family:"JetBrains Mono",monospace;font-size:7.5px;font-weight:700;
+  color:var(--primary);letter-spacing:.12em;margin-bottom:2px}
+.cvl-bar{width:130px;height:9px;border-radius:4px;
+  background:linear-gradient(to right,#10b981 0%,#38bdf8 40%,#f59e0b 75%,#f43f5e 100%)}
+.cvl-labels{display:flex;justify-content:space-between;
+  font-family:"JetBrains Mono",monospace;font-size:7px;color:var(--muted);margin-top:2px}
+.cvl-live{font-family:"JetBrains Mono",monospace;font-size:8.5px;font-weight:700;
+  color:var(--amber);text-align:center;margin-top:3px;padding-top:4px;border-top:1px solid var(--border)}
+
+/* ─── Current arrow animation ────────────────────────────────── */
+@keyframes cur-fade{0%,100%{opacity:.65}50%{opacity:1}}
+.cur-arrow-wrap{display:flex;align-items:center;justify-content:center;
+  animation:cur-fade 2.4s ease-in-out infinite}
+</style>
+</head>
+<body>
+
+<div id="ls">
+  <div class="lt">OCEANSIGHT 3D</div>
+  <div class="ls2">SIH26067 &middot; INCOIS &middot; MINISTRY OF EARTH SCIENCES</div>
+  <div class="lbt"><div class="lbf"></div></div>
+  <div class="ls2" style="opacity:.5">INITIALISING OCEAN MODEL ENGINE&hellip;</div>
+</div>
+<canvas id="c"></canvas>
+<div id="hud">
+  <div id="hbar">
+    <div class="sbadge">SIH26067</div>
+    <div class="atitle">OCEAN<span>SIGHT</span> 3D</div>
+    <div class="hdiv"></div>
+    <div class="tstrip">
+      <div class="tc"><div class="tl">ALTITUDE</div><div class="tv" id="hd-alt">+080 m</div></div>
+      <div class="tc"><div class="tl">WATER DEPTH</div><div class="tv am" id="hd-dep">000 m</div></div>
+      <div class="tc"><div class="tl">WATER TEMP</div><div class="tv am" id="hd-tmp">28.5 &deg;C</div></div>
+      <div class="tc"><div class="tl">CURRENT</div><div class="tv" id="hd-vel">0.54 kn</div></div>
+      <div class="tc"><div class="tl">SALINITY</div><div class="tv" id="hd-sal">35.2 PSU</div></div>
+      <div class="tc"><div class="tl">PRESSURE</div><div class="tv" id="hd-prs">1.00 bar</div></div>
+      <div class="tc"><div class="tl">LIVE WAVE HT</div><div class="tv" style="color:var(--green)" id="hd-wav">1.12 m</div></div>
+      <div class="tc"><div class="tl">WAVE PERIOD</div><div class="tv" id="hd-per">10.2 s</div></div>
+    </div>
+    <div class="hdiv"></div>
+    <div id="view-switch">
+      <button class="vswitch-btn active" id="btn-mode-2d">🗺️ 2D MAP</button>
+      <button class="vswitch-btn" id="btn-mode-3d">🌊 3D OCEAN</button>
+    </div>
+  </div>
+  <div id="pb">
+    <div class="pb-badge" id="pb-mode-badge">🌊 SURFACE</div>
+    <div class="pb-sep"></div>
+    <div class="pb-item"><span class="pb-lbl">ALT / DEPTH</span><span class="pb-val" id="pd">+080 m</span></div>
+    <div class="pb-sep"></div>
+    <div class="pb-item"><span class="pb-lbl">WATER TEMP</span><span class="pb-val am" id="pt">28.58 °C</span></div>
+    <div class="pb-sep"></div>
+    <div class="pb-item"><span class="pb-lbl">CURRENT</span><span class="pb-val cy" id="pb-vel">0.82 kn</span></div>
+    <div class="pb-sep"></div>
+    <div class="pb-layer" id="pb-layer-tag">MIXED LAYER</div>
+  </div>
+
+  <div id="lp">
+    <div class="lp-hdr">
+      <div class="lp-title">📊 THERMOCLINE &amp; DEPTH CONSOLE</div>
+      <div class="lp-badge" id="lp-status-tag">ARABIAN SEA</div>
+    </div>
+    <div class="lp-body">
+      <div class="lp-graph-col">
+        <canvas id="tc-canvas" width="160" height="175"></canvas>
+        <div class="aw" id="awarn">⚠️ ACOUSTIC SHADOW ZONE<br>Below 90m &mdash; sound velocity minimum. Submarine sensor blackout.</div>
+      </div>
+      <div class="lp-depth-col">
+        <div class="lp-depth-lbl">DEPTH PRESETS</div>
+        <div class="qb-grid">
+          <button class="qb act" data-alt="80">SURF</button>
+          <button class="qb" data-alt="-50">50m</button>
+          <button class="qb" data-alt="-100">100m</button>
+          <button class="qb" data-alt="-200">200m</button>
+          <button class="qb" data-alt="-400">400m</button>
+          <button class="qb" data-alt="-465">BED</button>
+        </div>
+        <div class="lp-depth-lbl" style="margin-top:4px">DIVE AXIS</div>
+        <div class="lp-slider-wrap">
+          <div class="lp-slider-ticks"><span>+80m</span><span>0m</span><span>-100m</span><span>-200m</span><span>-480m</span></div>
+          <input type="range" id="dslide" min="-465" max="80" value="80" step="5"/>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="rp">
+    <div class="pcard">
+      <div class="pcard-hdr">
+        <div class="plbl">⚡ 3D DATA LAYERS</div>
+        <div class="pcard-badge" id="active-layers-badge">6 ACTIVE</div>
+      </div>
+      <div class="rp-layers-row">
+        <div class="rp-toggles">
+          <button class="lbtn act" data-layer="surface"><span class="idot" style="background:#00f0ff;color:#00f0ff"></span><span class="ll">Ocean Surface</span></button>
+          <button class="lbtn act" data-layer="volume"><span class="idot" style="background:#ffaa00;color:#ffaa00"></span><span class="ll">Thermal Volume</span></button>
+          <button class="lbtn act" data-layer="grid"><span class="idot" style="background:#38bdf8;color:#38bdf8"></span><span class="ll">Model Grid</span></button>
+          <button class="lbtn act" data-layer="particles"><span class="idot" style="background:#00e5ff;color:#00e5ff"></span><span class="ll">Currents</span></button>
+          <button class="lbtn act" data-layer="seabed"><span class="idot" style="background:#64748b;color:#64748b"></span><span class="ll">Bathymetry</span></button>
+          <button class="lbtn act" data-layer="sensors"><span class="idot" style="background:#10b981;color:#10b981"></span><span class="ll">ARGO Floats</span></button>
+        </div>
+        <div class="rp-temp-scale">
+          <div id="cbt"><div id="cbn"></div></div>
+          <div class="cbls">
+            <div class="cblb warm">29&deg;C</div>
+            <div class="cblb">22&deg;C</div>
+            <div class="cblb">15&deg;C</div>
+            <div class="cblb therm">THERM</div>
+            <div class="cblb">8&deg;C</div>
+            <div class="cblb cold">5&deg;C</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pcard">
+      <div class="pcard-hdr">
+        <div class="plbl">📂 LOAD NetCDF MODEL</div>
+        <div class="pcard-badge">ROMS / GRIB2</div>
+      </div>
+      <div id="dz">
+        <div style="font-size:16px;color:var(--primary);margin-bottom:2px">⚡ +</div>
+        <div class="dlbl">Drop .nc file here or click to browse</div>
+        <input type="file" id="dfi" accept=".nc,.nc4" style="display:none"/>
+      </div>
+    </div>
+  </div>
+
+  <div id="bb">
+    <div class="blbl">⏳ 40-DAY FORECAST</div>
+    <div class="bb-controls">
+      <button class="bb-btn" id="tpb-prev" title="Step Back">⏮</button>
+      <button class="bb-btn" id="tpb" title="Play / Pause">▶</button>
+      <button class="bb-btn" id="tpb-next" title="Step Forward">⏭</button>
+    </div>
+    <input type="range" id="tslide" min="0" max="39" value="0" step="1"/>
+    <div id="tdisplay">T+00d 00h</div>
+    <div class="hdiv"></div>
+    <div class="bb-tag">INCOIS-ROMS</div>
+  </div>
+
+  <div id="ms"><div id="mst">🟢 LIVE API: ARABIAN SEA (28.6°C | 1.12m WAVES | 0.82kn)</div></div>
+
+  <div id="mm">
+    <div class="mm-hdr">
+      <div class="mmt">🛰️ RADAR MINIMAP</div>
+      <div class="mm-sub">18.9°N, 70.8°E</div>
+    </div>
+    <canvas id="mmc" width="142" height="96"></canvas>
+  </div>
+
+  <div id="si">
+    <div style="color:var(--primary);font-weight:700">SIH26067 · OCEAN 3D</div>
+    <div>INCOIS ARABIAN SEA GRID</div>
+    <div id="clk" style="color:var(--txt)"></div>
+  </div>
+</div>
+
+<!-- 2D MYOCEAN PRO GIS OVERLAY -->
+<div id="map-2d-overlay">
+  <div id="leaflet-map"></div>
+  
+  <div id="map2d-header">
+    <div class="m2d-region">🌐 ARABIAN SEA — <span id="m2d-region-lbl">2D GIS VIEW</span></div>
+    <div class="m2d-divider"></div>
+    <div class="m2d-vel">⟳ CURRENT VELOCITY <span class="val" id="m2d-cur-vel">0.82</span><span class="unit">kn</span></div>
+    <div class="m2d-divider"></div>
+    <div class="m2d-vel">🌡 SST <span class="val" id="m2d-sst-val">28.6</span><span class="unit">°C</span></div>
+    <div class="m2d-divider"></div>
+    <div class="m2d-inst">👆 Click ocean to select 3D region</div>
+  </div>
+
+  <div id="map2d-layers">
+    <div class="m2d-title">⚡ 2D OCEAN LAYERS</div>
+    <div class="layer2d-toggle active" data-layer2d="sst">
+      <span class="dot" style="background:#ff7700"></span><span>Sea Surface Temp (°C)</span>
+    </div>
+    <div class="layer2d-toggle active" data-layer2d="currents">
+      <span class="dot" style="background:#38bdf8"></span><span>Current Velocity (kn)</span>
+    </div>
+    <div class="layer2d-toggle active" data-layer2d="buoys">
+      <span class="dot" style="background:#ffaa00"></span><span>ARGO Profiling Buoys</span>
+    </div>
+    <div class="layer2d-toggle active" data-layer2d="insitu">
+      <span class="dot" style="background:#10b981"></span><span>In-Situ Observations</span>
+    </div>
+    <div class="layer2d-toggle" data-layer2d="bathy">
+      <span class="dot"></span><span>Seabed Contours</span>
+    </div>
+  </div>
+
+  <!-- Current Velocity Colorbar -->
+  <div id="cur-vel-legend">
+    <div class="cvl-title">⟳ CURRENT VELOCITY</div>
+    <div class="cvl-bar"></div>
+    <div class="cvl-labels"><span>0 kn</span><span>0.5</span><span>1.0</span><span>1.5+</span></div>
+    <div class="cvl-live">LIVE: <span id="cvl-live-val">0.82</span> kn</div>
+  </div>
+
+  <!-- In-Situ Observation Panel -->
+  <div id="insitu-panel">
+    <div class="is-hdr">
+      <div class="is-pulse"></div>
+      <div class="is-title">In-Situ Observations</div>
+      <div class="is-count">3 ACTIVE PLATFORMS</div>
+    </div>
+    <div class="is-row" onclick="showInsituModal('ARGO-IND-6902781')">
+      <span class="is-dot" style="background:#10b981;box-shadow:0 0 6px #10b981"></span>
+      <span class="is-id">6902781</span>
+      <span class="is-coord">18.4°N 71.2°E</span>
+      <span class="is-temp">27.8°C</span>
+      <span class="is-dep">18.5 m</span>
+      <span class="is-stat ok">OPTIMAL</span>
+    </div>
+    <div class="is-row" onclick="showInsituModal('ARGO-IND-6902782')">
+      <span class="is-dot" style="background:#10b981;box-shadow:0 0 6px #10b981"></span>
+      <span class="is-id">6902782</span>
+      <span class="is-coord">16.9°N 73.0°E</span>
+      <span class="is-temp">25.1°C</span>
+      <span class="is-dep">45.0 m</span>
+      <span class="is-stat ok">OPTIMAL</span>
+    </div>
+    <div class="is-row" onclick="showInsituModal('ARGO-IND-6902783')">
+      <span class="is-dot" style="background:#f59e0b;box-shadow:0 0 6px #f59e0b"></span>
+      <span class="is-id">6902783</span>
+      <span class="is-coord">20.0°N 69.5°E</span>
+      <span class="is-temp">15.6°C</span>
+      <span class="is-dep">120 m</span>
+      <span class="is-stat tx">TRANSMIT</span>
+    </div>
+    <div class="is-footer">
+      <span class="is-chip">CTD</span>
+      <span class="is-chip">SALINITY</span>
+      <span class="is-chip">DO</span>
+      <span class="is-chip">Bio-Argo</span>
+      <span class="is-sync" id="insitu-sync">Synced 4 min ago</span>
+    </div>
+  </div>
+
+  <div id="map2d-action">
+    <div class="m2d-vel" style="font-size:11px">
+      📍 <span style="color:var(--muted)">Target:</span> <span id="m2d-coords" style="color:var(--primary);font-weight:700">16.8°N–20.4°N, 69.8°E–73.2°E</span>
+    </div>
+    <button id="btn-launch-3d">
+      <span>🌊 GENERATE &amp; DIVE INTO 3D OCEAN</span>
+      <span style="font-size:16px">&rarr;</span>
+    </button>
+  </div>
+</div>
+
+<div id="modal">
+  <div class="mbox">
+    <div class="mhdr">
+      <div><div class="mtitle" id="m-name">ARGO Float</div><div class="mbadge" id="m-id">ID: -</div></div>
+      <button id="mcls">x</button>
+    </div>
+    <div class="mgrid">
+      <div class="mf"><div class="mfl">COORDINATES</div><div class="mfv p" id="m-coords">-</div></div>
+      <div class="mf"><div class="mfl">DEPTH</div><div class="mfv a" id="m-dep">-</div></div>
+      <div class="mf"><div class="mfl">TEMPERATURE</div><div class="mfv a" id="m-tmp">-</div></div>
+      <div class="mf"><div class="mfl">SALINITY</div><div class="mfv" id="m-sal">-</div></div>
+      <div class="mf"><div class="mfl">BATTERY</div><div class="mfv g" id="m-bat">-</div></div>
+      <div class="mf"><div class="mfl">STATUS</div><div class="mfv g" id="m-stat">-</div></div>
+      <div class="mf"><div class="mfl">CYCLE COUNT</div><div class="mfv" id="m-cyc">-</div></div>
+    </div>
+    <div class="msr"><div class="mfl">ONBOARD SENSORS</div><div class="schips" id="m-sens"></div></div>
+  </div>
+</div>
+
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/"}}</script>
+<script type="module">
+
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+const $ = id => document.getElementById(id);
+const set = (id,v) => { const e=$(id); if(e) e.textContent=v; };
+
+// Live Marine API Engine (Real-time Open-Meteo Arabian Sea observations & forecasts)
+const LIVE_API = {
+  active: false,
+  lat: 18.9, lon: 70.8, // Arabian Sea off Mumbai / INCOIS grid
+  sst: 28.6,
+  waveHeight: 1.12,
+  wavePeriod: 10.2,
+  waveDirection: 238,
+  currentKnots: 0.54,
+  hourlySST: [],
+  hourlyWaves: [],
+  hourlyCurrent: []
+};
+
+async function fetchLiveOceanData() {
+  const badge = $("mst");
+  if (badge) {
+    badge.textContent = "⏳ CONNECTING LIVE ARABIAN SEA API...";
+    badge.style.color = "var(--amber)";
+  }
+  try {
+    const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${LIVE_API.lat}&longitude=${LIVE_API.lon}&current=wave_height,wave_direction,wave_period,ocean_current_velocity,ocean_current_direction&hourly=sea_surface_temperature,wave_height,ocean_current_velocity&timezone=UTC`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const json = await res.json();
+    
+    if (json.current) {
+      LIVE_API.active = true;
+      LIVE_API.waveHeight = json.current.wave_height != null ? json.current.wave_height : 1.1;
+      LIVE_API.wavePeriod = json.current.wave_period != null ? json.current.wave_period : 10.0;
+      LIVE_API.waveDirection = json.current.wave_direction != null ? json.current.wave_direction : 240;
+      LIVE_API.currentKnots = ((json.current.ocean_current_velocity || 1.0) * 0.539957);
+    }
+    if (json.hourly && json.hourly.sea_surface_temperature) {
+      LIVE_API.hourlySST = json.hourly.sea_surface_temperature;
+      LIVE_API.hourlyWaves = json.hourly.wave_height || [];
+      LIVE_API.hourlyCurrent = json.hourly.ocean_current_velocity || [];
+      if (LIVE_API.hourlySST.length > 0 && LIVE_API.hourlySST[0] != null) {
+        LIVE_API.sst = LIVE_API.hourlySST[0];
+      }
+    }
+    if (badge) {
+      badge.textContent = `🟢 LIVE API: ARABIAN SEA (${LIVE_API.sst}°C | ${LIVE_API.waveHeight}m WAVES | ${LIVE_API.currentKnots.toFixed(2)}kn)`;
+      badge.style.color = "var(--green)";
+      badge.style.background = "rgba(16,185,129,.15)";
+      badge.style.borderColor = "rgba(16,185,129,.5)";
+    }
+    const curEl = $("m2d-cur-vel");
+    if (curEl) curEl.textContent = LIVE_API.currentKnots.toFixed(2);
+    const cvlEl = $("cvl-live-val");
+    if (cvlEl) cvlEl.textContent = LIVE_API.currentKnots.toFixed(2);
+    const sstEl = $("m2d-sst-val");
+    if (sstEl) sstEl.textContent = LIVE_API.sst.toFixed(1);
+    const pbVel = $("pb-vel");
+    if (pbVel) pbVel.textContent = LIVE_API.currentKnots.toFixed(2) + " kn";
+    console.log("OceanSight 3D: Connected to live Arabian Sea Marine API successfully!", LIVE_API);
+  } catch (e) {
+    console.warn("Live API fallback:", e);
+    if (badge) {
+      badge.textContent = "● INCOIS-ROMS CLIMATOLOGY (FALLBACK)";
+      badge.style.color = "var(--primary)";
+    }
+  }
+}
+fetchLiveOceanData();
+setInterval(fetchLiveOceanData, 300000); // refresh every 5 minutes
+
+function getTelemetry(cy, ti) {
+  const dep = cy < 0 ? Math.abs(cy) : 0;
+  const sig = 1 / (1 + Math.exp((dep - 95) / 18));
+  
+  let surfaceTemp = LIVE_API.sst;
+  let waveHt = LIVE_API.waveHeight;
+  let baseCur = LIVE_API.currentKnots;
+  
+  if (LIVE_API.hourlySST && LIVE_API.hourlySST.length > 0) {
+    const idx = Math.min(ti, LIVE_API.hourlySST.length - 1);
+    if (LIVE_API.hourlySST[idx] != null) surfaceTemp = LIVE_API.hourlySST[idx];
+    if (LIVE_API.hourlyWaves[idx] != null) waveHt = LIVE_API.hourlyWaves[idx];
+    if (LIVE_API.hourlyCurrent[idx] != null) baseCur = LIVE_API.hourlyCurrent[idx] * 0.539957;
+  }
+  
+  const temp = (surfaceTemp + Math.sin(ti * .25) * 0.15) * sig + 4.8 * (1 - sig);
+  const curSpeed = (baseCur * Math.exp(-dep / 180) + 0.05);
+  
+  return {
+    dep,
+    temp: temp.toFixed(2),
+    sal: (36.1 - (dep / 480) * .9 + Math.sin(ti * .15) * .2).toFixed(2),
+    vel: curSpeed.toFixed(2),
+    pres: (dep < 1 ? 1.013 : dep / 10).toFixed(2),
+    shadow: dep > 80 && dep < 180,
+    waveHeight: waveHt != null ? waveHt.toFixed(2) : "1.12",
+    wavePeriod: LIVE_API.wavePeriod != null ? LIVE_API.wavePeriod.toFixed(1) : "10.2"
+  };
+}
+
+function turbo(t) {
+  t=Math.max(0,Math.min(1,t));
+  let r,g,b;
+  if(t<.25){const u=t/.25;r=5+u*15;g=10+u*120;b=80+u*135;}
+  else if(t<.5){const u=(t-.25)/.25;r=u*90;g=130+u*90;b=215-u*120;}
+  else if(t<.75){const u=(t-.5)/.25;r=90+u*160;g=220-u*60;b=95-u*80;}
+  else{const u=(t-.75)/.25;r=250;g=160-u*130;b=15;}
+  return `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`;
+}
+function depthNorm(dr) {
+  if(dr<.12) return .97-dr*.35;
+  if(dr<.42){return .93-((dr-.12)/.30)*.58;}
+  return .35-((dr-.42)/.58)*.28;
+}
+
+// Scene
+const renderer = new THREE.WebGLRenderer({canvas:$("c"),antialias:true,powerPreference:"high-performance"});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled=true;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=.95;
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x040b17);
+scene.fog=new THREE.FogExp2(0x040b17,0.00065);
+const camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,.5,5000);
+camera.position.set(220,110,310);camera.lookAt(0,-120,0);
+const controls=new OrbitControls(camera,renderer.domElement);
+controls.target.set(0,-120,0);controls.enableDamping=true;controls.dampingFactor=.06;
+controls.minDistance=40;controls.maxDistance=2600;
+
+// Lighting
+const ambLight=new THREE.AmbientLight(0x90c2e8,.75);scene.add(ambLight);
+const sunLight=new THREE.DirectionalLight(0xfff7ea,1.35);sunLight.position.set(400,650,250);sunLight.castShadow=true;scene.add(sunLight);
+const uwaLight=new THREE.HemisphereLight(0x0077aa,0x020813,0);scene.add(uwaLight);
+const cf=new THREE.PointLight(0x00e5ff,.6,450);cf.position.set(0,-40,0);scene.add(cf);
+
+// Skydome / Atmospheric Ocean Horizon
+const skyGeo=new THREE.SphereGeometry(3200,32,16,0,Math.PI*2,0,Math.PI*0.53);
+const skyMat=new THREE.ShaderMaterial({
+  side:THREE.BackSide,
+  uniforms:{
+    uTopColor:{value:new THREE.Color(0x020611)},
+    uMidColor:{value:new THREE.Color(0x092238)},
+    uBottomColor:{value:new THREE.Color(0x030d1a)}
+  },
+  vertexShader:`
+    varying vec3 vWorldPos;
+    void main(){
+      vec4 wp=modelMatrix*vec4(position,1.0);
+      vWorldPos=wp.xyz;
+      gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);
+    }
+  `,
+  fragmentShader:`
+    uniform vec3 uTopColor;
+    uniform vec3 uMidColor;
+    uniform vec3 uBottomColor;
+    varying vec3 vWorldPos;
+    void main(){
+      float h=normalize(vWorldPos).y;
+      vec3 col=h>0.0?mix(uMidColor,uTopColor,pow(h,0.4)):mix(uMidColor,uBottomColor,pow(abs(h),0.6));
+      gl_FragColor=vec4(col,1.0);
+    }
+  `
+});
+const skyDome=new THREE.Mesh(skyGeo,skyMat);scene.add(skyDome);
+
+// ============================================================================
+// EXPANSIVE OCEAN SURFACE (Gerstner Waves + Fresnel Translucency + Seamless SST)
+// ============================================================================
+const VW=280,VD=180,VH=480;
+const SURF_SIZE=2800;
+const surfGeo=new THREE.PlaneGeometry(SURF_SIZE,SURF_SIZE,140,140);surfGeo.rotateX(-Math.PI/2);
+const sUni={
+  uTime:{value:0},
+  uCamPos:{value:new THREE.Vector3()},
+  uBounds:{value:new THREE.Vector4(-VW/2,-VD/2,VW/2,VD/2)}
+};
+const surfMat=new THREE.ShaderMaterial({
+  transparent:true,side:THREE.DoubleSide,uniforms:sUni,
+  vertexShader:`
+    uniform float uTime;
+    uniform vec3 uCamPos;
+    varying vec3 vP;
+    varying vec3 vNormal;
+    varying vec3 vViewDir;
+
+    vec3 gw(vec3 p,vec2 d,float A,float L,float sp,float ph,inout vec3 n){
+      float k=6.28318/L;
+      float w=sqrt(9.8*k);
+      float f=k*dot(d,p.xz)-w*sp*uTime+ph;
+      float c=cos(f);
+      float s=sin(f);
+      n.x-=d.x*(k*A*c);
+      n.z-=d.y*(k*A*c);
+      n.y-=k*A*s*0.35;
+      return vec3(d.x*A*c,A*s,d.y*A*c);
+    }
+    void main(){
+      vec3 p=position;
+      vec3 n=vec3(0.0,1.0,0.0);
+      p+=gw(p,normalize(vec2(1.0,0.7)),1.5,75.0,1.0,0.0,n);
+      p+=gw(p,normalize(vec2(0.35,-0.95)),0.95,38.0,1.25,2.1,n);
+      p+=gw(p,normalize(vec2(-0.85,0.5)),0.45,17.0,1.6,4.2,n);
+      vP=p;
+      vNormal=normalize(n);
+      vViewDir=normalize(uCamPos-p);
+      gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.0);
+    }
+  `,
+  fragmentShader:`
+    uniform float uTime;
+    uniform vec4 uBounds;
+    varying vec3 vP;
+    varying vec3 vNormal;
+    varying vec3 vViewDir;
+
+    void main(){
+      float fresnel=clamp(1.0-max(0.0,dot(vNormal,vViewDir)),0.0,1.0);
+      float fresnelTerm=pow(fresnel,3.0);
+
+      vec3 deepCol=vec3(0.015,0.08,0.18);
+      vec3 shallowCol=vec3(0.04,0.32,0.52);
+      vec3 skyReflect=vec3(0.18,0.62,0.88);
+
+      float foam=pow(clamp((vP.y+0.6)/2.4,0.0,1.0),2.8)*0.45;
+      vec3 col=mix(deepCol,shallowCol,clamp((vP.y+2.5)/5.0,0.0,1.0));
+      col=mix(col,skyReflect,fresnelTerm*0.75)+foam;
+
+      vec3 sunDir=normalize(vec3(0.55,1.0,0.35));
+      vec3 halfVec=normalize(vViewDir+sunDir);
+      float spec=pow(max(0.0,dot(vNormal,halfVec)),36.0);
+      col+=vec3(0.85,0.95,1.0)*spec*0.6;
+
+      // Looking straight down: high transparency to see water column! Grazing angle: specular reflection
+      float alpha=mix(0.52,0.94,fresnelTerm);
+      gl_FragColor=vec4(col,alpha);
+    }
+  `
+});
+const surfMesh=new THREE.Mesh(surfGeo,surfMat);scene.add(surfMesh);
+
+// ============================================================================
+// EXPANSIVE ARABIAN SEA BATHYMETRY (Continental Shelf, Slope & Isobath Contours)
+// ============================================================================
+const sbGrp=new THREE.Group();scene.add(sbGrp);
+const SB_SIZE=2800;
+const sbGeo=new THREE.PlaneGeometry(SB_SIZE,SB_SIZE,130,130);sbGeo.rotateX(-Math.PI/2);
+const sbPos=sbGeo.attributes.position;
+const sbDepths=new Float32Array(sbPos.count);
+
+for(let i=0;i<sbPos.count;i++){
+  const x=sbPos.getX(i),z=sbPos.getZ(i);
+
+  // Continental shelf towards Eastern flank (coast of India)
+  const shelfRamp=Math.min(1.0,Math.max(0.0,(x+350)/1100));
+  const shelfElevation=-490+Math.pow(shelfRamp,1.7)*365; // -490m abyssal up to -125m shelf
+
+  // Central survey basin smoothing under prism
+  const distCenter=Math.hypot(x,z);
+  const centerBasin=Math.exp(-Math.pow(distCenter/360,2));
+  let y=shelfElevation*(1-centerBasin)+(-492)*centerBasin;
+
+  // Submarine ridges, seamounts and canyon bathymetry
+  const ridge=Math.sin(x*0.007)*Math.cos(z*0.005)*35.0;
+  const canyon=-Math.exp(-Math.pow((z-x*0.42+110)/130,2))*50.0;
+  const terrain=Math.sin(x*0.018+z*0.014)*14.0+Math.cos(x*0.035-z*0.022)*6.0;
+
+  y+=(ridge+canyon+terrain)*(1-centerBasin*0.65);
+  sbPos.setY(i,y);
+  sbDepths[i]=y;
+}
+sbGeo.setAttribute("depthAttr",new THREE.BufferAttribute(sbDepths,1));
+sbGeo.computeVertexNormals();
+
+const sbUni={
+  uTime:{value:0},
+  uLightDir:{value:new THREE.Vector3(0.5,0.9,0.3).normalize()}
+};
+const sbMat=new THREE.ShaderMaterial({
+  uniforms:sbUni,
+  vertexShader:`
+    attribute float depthAttr;
+    varying float vDepth;
+    varying vec3 vWorldPos;
+    varying vec3 vNormal;
+    void main(){
+      vDepth=depthAttr;
+      vec4 wp=modelMatrix*vec4(position,1.0);
+      vWorldPos=wp.xyz;
+      vNormal=normalize(normalMatrix*normal);
+      gl_Position=projectionMatrix*viewMatrix*wp;
+    }
+  `,
+  fragmentShader:`
+    uniform float uTime;
+    uniform vec3 uLightDir;
+    varying float vDepth;
+    varying vec3 vWorldPos;
+    varying vec3 vNormal;
+
+    void main(){
+      float dNorm=clamp((-vDepth-110.0)/390.0,0.0,1.0);
+      vec3 colShelf=vec3(0.04,0.36,0.32);   // continental shelf teal
+      vec3 colSlope=vec3(0.02,0.15,0.30);   // continental slope cobalt
+      vec3 colAbyss=vec3(0.006,0.035,0.09); // deep abyss navy
+
+      vec3 baseCol=dNorm<0.45?mix(colShelf,colSlope,dNorm/0.45):mix(colSlope,colAbyss,(dNorm-0.45)/0.55);
+      float diff=max(0.18,dot(vNormal,uLightDir));
+      vec3 col=baseCol*(diff*0.85+0.25);
+
+      // Topographic Multi-beam Sonar Isobaths (every 25m)
+      float contour=1.0-smoothstep(0.0,1.1,abs(fract(-vDepth/25.0)-0.5)*25.0);
+      col+=vec3(0.0,0.65,0.85)*contour*0.28;
+
+      // Sonar Acoustic Sweep Wave expanding outward across seafloor
+      float rDist=length(vWorldPos.xz);
+      float sonarCycle=mod(uTime*115.0,2200.0);
+      float sonarPing=exp(-pow((rDist-sonarCycle)/42.0,2.0));
+      col+=vec3(0.0,1.0,0.7)*sonarPing*0.55;
+
+      // Horizon fog attenuation
+      float camDist=length(vWorldPos-cameraPosition);
+      float fogF=clamp((camDist-700.0)/1800.0,0.0,1.0);
+      col=mix(col,vec3(0.004,0.015,0.05),fogF*0.92);
+
+      gl_FragColor=vec4(col,1.0);
+    }
+  `
+});
+const sbMesh=new THREE.Mesh(sbGeo,sbMat);sbGrp.add(sbMesh);
+const sbWire=new THREE.Mesh(sbGeo,new THREE.MeshBasicMaterial({color:0x007799,wireframe:true,transparent:true,opacity:0.08}));sbGrp.add(sbWire);
+
+// Seafloor Acoustic Transponder Stations at Seabed Anchors
+const seabedPings=[];
+[[-VW/2,-VD/2],[VW/2,-VD/2],[VW/2,VD/2],[-VW/2,VD/2]].forEach(([px,pz])=>{
+  const tg=new THREE.Group();tg.position.set(px,-490,pz);
+  const base=new THREE.Mesh(new THREE.CylinderGeometry(4,6,3,12),new THREE.MeshStandardMaterial({color:0xffaa00,roughness:.4,metalness:.6}));
+  base.position.y=1.5;tg.add(base);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(1.5,12,12),new THREE.MeshBasicMaterial({color:0x00ffcc}));
+  head.position.y=3.5;tg.add(head);
+  const pRing=new THREE.Mesh(new THREE.RingGeometry(3,4.2,24),new THREE.MeshBasicMaterial({color:0x00ffff,transparent:true,opacity:.6,side:THREE.DoubleSide}));
+  pRing.rotateX(-Math.PI/2);pRing.position.y=3.6;tg.add(pRing);
+  sbGrp.add(tg);
+  seabedPings.push(pRing);
+});
+
+// Volumetric column
+const volGrp=new THREE.Group();scene.add(volGrp);
+function makeCanvas(w,h,fn){const cv=document.createElement("canvas");cv.width=w;cv.height=h;const ctx=cv.getContext("2d");fn(ctx,w,h);return new THREE.CanvasTexture(cv);}
+const sstTex=makeCanvas(512,256,(ctx,w,h)=>{for(let y=0;y<h;y++)for(let x=0;x<w;x++){const nx=x/w,ny=y/h,dc=Math.hypot(nx-.45,ny-.48);ctx.fillStyle=turbo(Math.max(.08,Math.min(1,.6+Math.exp(-dc*3.8)*.38+Math.sin(nx*5+ny*2.2)*.07)));ctx.fillRect(x,y,1,1);}});
+const vTex=makeCanvas(128,512,(ctx,w,h)=>{for(let y=0;y<h;y++){ctx.fillStyle=turbo(Math.max(.05,depthNorm(y/h)));ctx.fillRect(0,y,w,1);}});
+const fma=(op,map)=>new THREE.MeshStandardMaterial({transparent:true,opacity:op,roughness:.2,emissive:new THREE.Color(0x001122),emissiveIntensity:.35,side:THREE.DoubleSide,map});
+const tg=new THREE.PlaneGeometry(VW,VD);tg.rotateX(-Math.PI/2);
+const topMesh=new THREE.Mesh(tg,fma(.55,sstTex));
+topMesh.position.y=-2.5; // Offset below wave surface so Gerstner waves flow naturally
+volGrp.add(topMesh);
+const fg=new THREE.PlaneGeometry(VW,VH);
+[[VD/2,0],[-(VD/2),Math.PI]].forEach(([z,ry])=>{const m=new THREE.Mesh(fg,fma(.84,vTex));m.position.set(0,-VH/2,z);if(ry)m.rotation.y=ry;volGrp.add(m);});
+const sg=new THREE.PlaneGeometry(VD,VH);
+[[-VW/2,Math.PI/2],[VW/2,-Math.PI/2]].forEach(([x,ry])=>{const m=new THREE.Mesh(sg,fma(.82,vTex));m.position.set(x,-VH/2,0);m.rotation.y=ry;volGrp.add(m);});
+const slices=[];
+for(let i=1;i<19;i++){
+  const dr=i/19,yD=-dr*VH,bn=Math.max(.05,depthNorm(dr));
+  const stx=makeCanvas(256,128,(ctx,w,h)=>{for(let sy=0;sy<h;sy++)for(let sx=0;sx<w;sx++){ctx.fillStyle=turbo(Math.max(.05,Math.min(1,bn+Math.sin(sx*.1)*.04+Math.cos(sy*.12)*.03)));ctx.fillRect(sx,sy,1,1);}});
+  const sg2=new THREE.PlaneGeometry(VW-1,VD-1);sg2.rotateX(-Math.PI/2);
+  const sm=new THREE.Mesh(sg2,new THREE.MeshStandardMaterial({map:stx,transparent:true,opacity:dr<.4?.3:dr<.7?.36:.44,roughness:.3,emissive:new THREE.Color(0x001133),emissiveIntensity:.45,side:THREE.DoubleSide}));
+  sm.position.set(0,yD,0);sm.userData={baseY:yD,spd:.4+i*.05,ph:i*.35};volGrp.add(sm);slices.push(sm);
+}
+const dl1=new THREE.PointLight(0x1133cc,2.8,350);dl1.position.set(0,-370,0);volGrp.add(dl1);
+const dl2=new THREE.PointLight(0x0022aa,2.0,280);dl2.position.set(90,-450,50);volGrp.add(dl2);
+const dl3=new THREE.PointLight(0x00ddcc,1.8,300);dl3.position.set(-60,-195,-45);volGrp.add(dl3);
+
+// Grid
+const gridGrp=new THREE.Group();scene.add(gridGrp);
+const bh=new THREE.BoxHelper(new THREE.Mesh(new THREE.BoxGeometry(VW,VH,VD)),0x00f0ff);
+bh.position.set(0,-VH/2,0);bh.material.opacity=.5;bh.material.transparent=true;gridGrp.add(bh);
+const gpts=[],gmat=new THREE.LineBasicMaterial({color:0x00f0ff,transparent:true,opacity:.2});
+for(let ix=0;ix<=6;ix++)for(let iz=0;iz<=4;iz++){const x=-VW/2+(ix/6)*VW,z=-VD/2+(iz/4)*VD;gpts.push(new THREE.Vector3(x,0,z),new THREE.Vector3(x,-VH,z));}
+for(let iy=1;iy<6;iy++){const y=-(iy/6)*VH;for(let iz=0;iz<=4;iz++){const z=-VD/2+(iz/4)*VD;gpts.push(new THREE.Vector3(-VW/2,y,z),new THREE.Vector3(VW/2,y,z));}for(let ix=0;ix<=6;ix++){const x=-VW/2+(ix/6)*VW;gpts.push(new THREE.Vector3(x,y,-VD/2),new THREE.Vector3(x,y,VD/2));}}
+gridGrp.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(gpts),gmat));
+
+// ============================================================================
+// DYNAMIC 3D OCEAN CURRENT SYSTEM (Streamline Streaks + Bioluminescent Tracers)
+// ============================================================================
+const currentsGrp=new THREE.Group();scene.add(currentsGrp);
+
+const curCount=1800;
+const curUniforms={
+  uTime:{value:0},
+  uLiveSpeed:{value:0.82}
+};
+
+// 1. Flow Streamlines (Directional Velocity Streaks)
+const streamGeo=new THREE.BufferGeometry();
+const streamPos=new Float32Array(curCount*2*3);
+const streamVel=new Float32Array(curCount*2*3);
+const streamHead=new Float32Array(curCount*2);
+const streamSeed=new Float32Array(curCount*2);
+
+for(let i=0;i<curCount;i++){
+  const px=(Math.random()-.5)*VW*.96;
+  const py=-Math.random()*(VH-10);
+  const pz=(Math.random()-.5)*VD*.96;
+
+  const dist=Math.sqrt(px*px+pz*pz);
+  const ang=Math.atan2(pz,px)+Math.PI/2;
+  const depthDecay=Math.exp(py/170.0);
+  const coreSpd=(0.5+0.9*Math.exp(-Math.pow(dist-65,2)/2800))*depthDecay;
+
+  const vx=Math.cos(ang)*coreSpd;
+  const vy=Math.sin(px*.02+pz*.02)*.03*depthDecay;
+  const vz=Math.sin(ang)*coreSpd;
+  const seed=Math.random();
+
+  const idx0=i*2;
+  streamPos[idx0*3]=px;streamPos[idx0*3+1]=py;streamPos[idx0*3+2]=pz;
+  streamVel[idx0*3]=vx;streamVel[idx0*3+1]=vy;streamVel[idx0*3+2]=vz;
+  streamHead[idx0]=0.0;streamSeed[idx0]=seed;
+
+  const idx1=i*2+1;
+  streamPos[idx1*3]=px;streamPos[idx1*3+1]=py;streamPos[idx1*3+2]=pz;
+  streamVel[idx1*3]=vx;streamVel[idx1*3+1]=vy;streamVel[idx1*3+2]=vz;
+  streamHead[idx1]=1.0;streamSeed[idx1]=seed;
+}
+
+streamGeo.setAttribute("position",new THREE.BufferAttribute(streamPos,3));
+streamGeo.setAttribute("velocity",new THREE.BufferAttribute(streamVel,3));
+streamGeo.setAttribute("isHead",new THREE.BufferAttribute(streamHead,1));
+streamGeo.setAttribute("seed",new THREE.BufferAttribute(streamSeed,1));
+
+const streamMat=new THREE.ShaderMaterial({
+  transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,uniforms:curUniforms,
+  vertexShader:`
+    uniform float uTime;
+    uniform float uLiveSpeed;
+    attribute vec3 velocity;
+    attribute float isHead;
+    attribute float seed;
+    varying vec3 vColor;
+    varying float vAlpha;
+
+    void main(){
+      vec3 pos=position;
+      float speedMult=max(0.4,uLiveSpeed*1.5);
+      float t=mod(uTime*14.0*speedMult+seed*100.0,100.0);
+      pos+=velocity*t;
+
+      if(pos.x>140.0)pos.x-=280.0;
+      if(pos.x<-140.0)pos.x+=280.0;
+      if(pos.z>90.0)pos.z-=180.0;
+      if(pos.z<-90.0)pos.z+=180.0;
+      if(pos.y>0.0)pos.y-=480.0;
+      if(pos.y<-480.0)pos.y+=480.0;
+
+      float streakLen=14.0*max(0.5,min(2.0,uLiveSpeed));
+      if(isHead<0.5){
+        vec3 dir=length(velocity)>0.001?normalize(velocity):vec3(1.0,0.0,0.0);
+        pos-=dir*streakLen;
+      }
+
+      float dr=clamp(-pos.y/480.0,0.0,1.0);
+      vec3 colSurf=vec3(0.0,0.95,1.0);
+      vec3 colTherm=vec3(0.0,0.65,0.95);
+      vec3 colDeep=vec3(0.05,0.25,0.75);
+      vColor=dr<0.35?mix(colSurf,colTherm,dr/0.35):mix(colTherm,colDeep,(dr-0.35)/0.65);
+
+      vAlpha=(isHead>0.5?0.92:0.06)*(1.0-dr*0.45);
+      gl_Position=projectionMatrix*modelViewMatrix*vec4(pos,1.0);
+    }
+  `,
+  fragmentShader:`varying vec3 vColor;varying float vAlpha;void main(){gl_FragColor=vec4(vColor,vAlpha);}`
+});
+const streamMesh=new THREE.LineSegments(streamGeo,streamMat);
+currentsGrp.add(streamMesh);
+
+// 2. Luminous Flow Tracer Orbs (Particle heads with soft glowing aura)
+const pGeo=new THREE.BufferGeometry();
+const pPos=new Float32Array(curCount*3);
+const pVel=new Float32Array(curCount*3);
+const pSeed=new Float32Array(curCount);
+
+for(let i=0;i<curCount;i++){
+  pPos[i*3]=streamPos[i*2*3];
+  pPos[i*3+1]=streamPos[i*2*3+1];
+  pPos[i*3+2]=streamPos[i*2*3+2];
+  pVel[i*3]=streamVel[i*2*3];
+  pVel[i*3+1]=streamVel[i*2*3+1];
+  pVel[i*3+2]=streamVel[i*2*3+2];
+  pSeed[i]=streamSeed[i*2];
+}
+
+pGeo.setAttribute("position",new THREE.BufferAttribute(pPos,3));
+pGeo.setAttribute("velocity",new THREE.BufferAttribute(pVel,3));
+pGeo.setAttribute("seed",new THREE.BufferAttribute(pSeed,1));
+
+const pMat=new THREE.ShaderMaterial({
+  transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,uniforms:curUniforms,
+  vertexShader:`
+    uniform float uTime;
+    uniform float uLiveSpeed;
+    attribute vec3 velocity;
+    attribute float seed;
+    varying vec3 vColor;
+    varying float vAlpha;
+
+    void main(){
+      vec3 pos=position;
+      float speedMult=max(0.4,uLiveSpeed*1.5);
+      float t=mod(uTime*14.0*speedMult+seed*100.0,100.0);
+      pos+=velocity*t;
+
+      if(pos.x>140.0)pos.x-=280.0;
+      if(pos.x<-140.0)pos.x+=280.0;
+      if(pos.z>90.0)pos.z-=180.0;
+      if(pos.z<-90.0)pos.z+=180.0;
+      if(pos.y>0.0)pos.y-=480.0;
+      if(pos.y<-480.0)pos.y+=480.0;
+
+      float dr=clamp(-pos.y/480.0,0.0,1.0);
+      vec3 colSurf=vec3(0.05,1.0,0.95);
+      vec3 colDeep=vec3(0.1,0.45,0.95);
+      vColor=mix(colSurf,colDeep,dr);
+
+      float pulse=0.85+0.15*sin(uTime*3.2+seed*6.28);
+      vAlpha=(1.0-dr*0.35)*pulse*0.95;
+
+      vec4 mv=modelViewMatrix*vec4(pos,1.0);
+      gl_PointSize=clamp(480.0/-mv.z,3.5,10.5);
+      gl_Position=projectionMatrix*mv;
+    }
+  `,
+  fragmentShader:`
+    varying vec3 vColor;
+    varying float vAlpha;
+    void main(){
+      vec2 c=gl_PointCoord-vec2(0.5);
+      float d=length(c);
+      if(d>0.5)discard;
+      float glow=exp(-d*4.2);
+      gl_FragColor=vec4(vColor,vAlpha*glow);
+    }
+  `
+});
+const pMesh=new THREE.Points(pGeo,pMat);
+currentsGrp.add(pMesh);
+
+// ARGO buoys
+const sensorGrp=new THREE.Group();scene.add(sensorGrp);
+const buoys=[];
+[{id:"ARGO-IND-6902781",name:"Argo Float #6902781",x:-45,z:25,lat:"18.42N",lon:"71.18E",depthMeters:18.5,temp:"27.84 C",salinity:"36.21 PSU",battery:"94%",status:"OPTIMAL",cycle:142,sensors:"CTD (SBE-41CP)+Aanderaa Optode DO"},
+ {id:"ARGO-IND-6902782",name:"Argo Float #6902782",x:35,z:-40,lat:"16.85N",lon:"73.04E",depthMeters:45.0,temp:"25.12 C",salinity:"36.45 PSU",battery:"88%",status:"OPTIMAL",cycle:98,sensors:"CTD (Sea-Bird SBE-41CP)"},
+ {id:"ARGO-IND-6902783",name:"Argo Float #6902783",x:-85,z:-75,lat:"19.95N",lon:"69.45E",depthMeters:120.0,temp:"15.65 C",salinity:"35.80 PSU",battery:"76%",status:"TRANSMITTING",cycle:215,sensors:"Bio-Argo (CTD+Chl-a+Backscatter)"}
+].forEach(d=>{
+  const bg=new THREE.Group();bg.position.set(d.x,0,d.z);
+  const h=new THREE.Mesh(new THREE.CylinderGeometry(1.6,1.4,6,16),new THREE.MeshStandardMaterial({color:0xffaa00,roughness:.35,metalness:.45}));h.position.y=-2;bg.add(h);
+  const co=new THREE.Mesh(new THREE.TorusGeometry(2,.4,12,24),new THREE.MeshStandardMaterial({color:0xff3300,roughness:.4}));co.rotation.x=Math.PI/2;co.position.y=-.5;bg.add(co);
+  const ma=new THREE.Mesh(new THREE.CylinderGeometry(.12,.12,5,8),new THREE.MeshStandardMaterial({color:0xcccccc,metalness:.8}));ma.position.y=2.5;bg.add(ma);
+  const beacon=new THREE.Mesh(new THREE.SphereGeometry(.35,12,12),new THREE.MeshBasicMaterial({color:0x00ffaa}));beacon.position.y=5;bg.add(beacon);
+  const rg=new THREE.RingGeometry(2.5,3.2,32);rg.rotateX(-Math.PI/2);
+  const ring=new THREE.Mesh(rg,new THREE.MeshBasicMaterial({color:0x00e5ff,transparent:true,opacity:.45,side:THREE.DoubleSide}));ring.position.y=.2;bg.add(ring);
+  bg.userData={...d,isArgoBuoy:true,beacon,ring};sensorGrp.add(bg);buoys.push(bg);
+});
+
+// State
+let targetY=80,timeIndex=0,isPlaying=false,playTimer=null,cameraMode="ORBIT";
+const raycaster=new THREE.Raycaster(),mouse=new THREE.Vector2();
+const layers={surface:true,volume:true,grid:true,particles:true,seabed:true,sensors:true};
+
+// HUD bindings
+$("dslide").addEventListener("input",e=>{targetY=parseFloat(e.target.value);syncQ(targetY);if(cameraMode==="ORBIT")controls.target.y=Math.min(targetY-40,-20);});
+document.querySelectorAll(".qb").forEach(b=>b.addEventListener("click",()=>{const a=parseFloat(b.dataset.alt);targetY=a;$("dslide").value=a;syncQ(a);if(cameraMode==="ORBIT")controls.target.y=Math.min(a-40,-20);}));
+function syncQ(v){document.querySelectorAll(".qb").forEach(b=>b.classList.toggle("act",parseFloat(b.dataset.alt)===v));}
+$("m-orb")?.addEventListener("click",()=>{cameraMode="ORBIT";controls.enabled=true;$("m-orb").classList.add("act");});
+
+function updateLayersBadge(){
+  const count=Object.values(layers).filter(Boolean).length;
+  const b=$("active-layers-badge");
+  if(b)b.textContent=count+" ACTIVE";
+}
+updateLayersBadge();
+
+document.querySelectorAll(".lbtn").forEach(b=>b.addEventListener("click",()=>{
+  const k=b.dataset.layer;layers[k]=!layers[k];const a=layers[k];b.classList.toggle("act",a);
+  if(k==="surface")surfMesh.visible=a;else if(k==="volume")volGrp.visible=a;else if(k==="grid")gridGrp.visible=a;
+  else if(k==="particles")currentsGrp.visible=a;else if(k==="seabed"){sbGrp.visible=a;}else if(k==="sensors")sensorGrp.visible=a;
+  updateLayersBadge();
+}));
+$("tpb").addEventListener("click",()=>{isPlaying=!isPlaying;if(isPlaying)playTimer=setInterval(()=>{timeIndex=(timeIndex+1)%40;$("tslide").value=timeIndex;},800);else clearInterval(playTimer);});
+$("tpb-prev")?.addEventListener("click",()=>{timeIndex=(timeIndex-1+40)%40;$("tslide").value=timeIndex;});
+$("tpb-next")?.addEventListener("click",()=>{timeIndex=(timeIndex+1)%40;$("tslide").value=timeIndex;});
+$("tslide").addEventListener("input",e=>{timeIndex=parseInt(e.target.value);});
+$("mcls").addEventListener("click",()=>$("modal").classList.remove("open"));
+$("dz").addEventListener("click",()=>$("dfi").click());
+$("dfi").addEventListener("change",e=>{if(e.target.files[0]){$("mst").textContent="FILE: "+e.target.files[0].name.slice(0,16).toUpperCase();}});
+$("dz").addEventListener("dragover",e=>{e.preventDefault();$("dz").style.borderColor="var(--glow)";});
+$("dz").addEventListener("dragleave",()=>$("dz").style.borderColor="");
+$("dz").addEventListener("drop",e=>{e.preventDefault();$("dz").style.borderColor="";});
+window.addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+window.addEventListener("click",e=>{
+  const rect=renderer.domElement.getBoundingClientRect();
+  mouse.x=((e.clientX-rect.left)/rect.width)*2-1;mouse.y=-((e.clientY-rect.top)/rect.height)*2+1;
+  raycaster.setFromCamera(mouse,camera);
+  const hits=raycaster.intersectObjects(sensorGrp.children,true);
+  if(hits.length){let root=hits[0].object;while(root.parent&&root.parent!==sensorGrp)root=root.parent;if(root.userData?.isArgoBuoy)showModal(root.userData);}
+});
+function showModal(d){
+  $("m-name").textContent=d.name;
+  $("m-id").textContent="ID: "+d.id;
+  $("m-coords").textContent=(d.lat && d.lon) ? (d.lat+", "+d.lon) : (d.coords || "-");
+  const depStr = String(d.depthMeters || d.dep || "-");
+  $("m-dep").textContent = depStr.endsWith("m") ? depStr : (depStr + " m");
+  $("m-tmp").textContent=d.temp || "-";
+  $("m-sal").textContent=d.salinity || "-";
+  $("m-bat").textContent=d.battery || "-";
+  $("m-stat").textContent=d.status || "-";
+  const cycStr = String(d.cycle || "-");
+  $("m-cyc").textContent = cycStr.includes("cycle") ? cycStr : (cycStr + " cycles");
+  const chips=$("m-sens");
+  chips.innerHTML="";
+  (d.sensors || "CTD").split("+").forEach(s=>{const c=document.createElement("div");c.className="sch";c.textContent=s.trim();chips.appendChild(c);});
+  $("modal").classList.add("open");
+}
+setInterval(()=>{const e=$("clk");if(e)e.textContent=new Date().toUTCString().replace("GMT","UTC");},1000);
+$("clk").textContent=new Date().toUTCString().replace("GMT","UTC");
+
+// Canvas 2D
+const tcCanvas = $("tc-canvas");
+const tcCtx = tcCanvas ? tcCanvas.getContext("2d") : null;
+const mmCanvas = $("mmc");
+const mmCtx = mmCanvas ? mmCanvas.getContext("2d") : null;
+
+function drawThermo(cy){
+  if(!tcCtx) return;
+  const cv=tcCanvas,w=cv.width,h=cv.height;
+  tcCtx.clearRect(0,0,w,h);
+  const bg=tcCtx.createLinearGradient(0,0,0,h);
+  bg.addColorStop(0,"rgba(0,200,180,.08)");
+  bg.addColorStop(.35,"rgba(0,80,200,.12)");
+  bg.addColorStop(1,"rgba(0,10,40,.25)");
+  tcCtx.fillStyle=bg;tcCtx.fillRect(0,0,w,h);
+  
+  tcCtx.fillStyle="rgba(255,160,0,.07)";tcCtx.fillRect(0,0,w,h*.32);
+  tcCtx.fillStyle="rgba(56,189,248,.05)";tcCtx.fillRect(0,h*.32,w,h*.33);
+  tcCtx.fillStyle="rgba(80,0,200,.06)";tcCtx.fillRect(0,h*.65,w,h*.35);
+  
+  tcCtx.font="7px monospace";
+  tcCtx.fillStyle="rgba(245,158,11,.85)";tcCtx.fillText("MIXED LAYER",4,12);
+  tcCtx.fillStyle="rgba(56,189,248,.85)";tcCtx.fillText("THERMOCLINE",4,h*.32+12);
+  tcCtx.fillStyle="rgba(130,80,255,.85)";tcCtx.fillText("DEEP WATER",4,h*.65+12);
+  
+  tcCtx.beginPath();
+  for(let py=0;py<h;py++){
+    const dr=py/h,sig=1/(1+Math.exp((dr-.32)/.07)),temp=28.5*sig+4.8*(1-sig),tx=8+((temp-4.8)/(28.5-4.8))*(w-20);
+    if(py===0)tcCtx.moveTo(tx,py);else tcCtx.lineTo(tx,py);
+  }
+  const gr=tcCtx.createLinearGradient(0,0,0,h);
+  gr.addColorStop(0,"#f59e0b");gr.addColorStop(.35,"#38bdf8");gr.addColorStop(1,"#6d28d9");
+  tcCtx.strokeStyle=gr;tcCtx.lineWidth=2.5;tcCtx.stroke();
+  
+  const dep=cy<0?Math.abs(cy):0,py=Math.min(h-2,(dep/480)*h);
+  tcCtx.strokeStyle="rgba(255,255,255,.85)";tcCtx.lineWidth=1;
+  tcCtx.setLineDash([3,3]);
+  tcCtx.beginPath();tcCtx.moveTo(0,py);tcCtx.lineTo(w,py);tcCtx.stroke();
+  tcCtx.setLineDash([]);
+  
+  tcCtx.fillStyle="#fff";tcCtx.beginPath();tcCtx.arc(8,py,3.5,0,Math.PI*2);tcCtx.fill();
+  tcCtx.font="7px monospace";tcCtx.fillStyle="rgba(148,163,184,.85)";tcCtx.textAlign="right";
+  [["0m",2],["100m",h*.208],["200m",h*.416],["300m",h*.625],["480m",h-4]].forEach(([l,y])=>tcCtx.fillText(l,w-3,y+7));
+  tcCtx.textAlign="left";
+}
+
+function drawMinimap(cy){
+  if(!mmCtx) return;
+  const cv=mmCanvas,w=cv.width,h=cv.height;
+  mmCtx.clearRect(0,0,w,h);
+  
+  // High-tech Tactical Radar Background
+  mmCtx.fillStyle="rgba(4,12,24,.95)";
+  mmCtx.fillRect(0,0,w,h);
+  
+  // Coordinate grid lines
+  mmCtx.strokeStyle="rgba(56,189,248,.12)";
+  mmCtx.lineWidth=1;
+  mmCtx.setLineDash([2,3]);
+  mmCtx.beginPath();
+  mmCtx.moveTo(w*0.3,0);mmCtx.lineTo(w*0.3,h);
+  mmCtx.moveTo(w*0.7,0);mmCtx.lineTo(w*0.7,h);
+  mmCtx.moveTo(0,h*0.35);mmCtx.lineTo(w,h*0.35);
+  mmCtx.moveTo(0,h*0.7);mmCtx.lineTo(w,h*0.7);
+  mmCtx.stroke();
+  mmCtx.setLineDash([]);
+
+  // Concentric Radar Range Rings
+  const cx=w*0.52,cyPos=h*0.5;
+  mmCtx.strokeStyle="rgba(16,185,129,.2)";
+  mmCtx.lineWidth=1;
+  [22,42].forEach(r=>{
+    mmCtx.beginPath();
+    mmCtx.arc(cx,cyPos,r,0,Math.PI*2);
+    mmCtx.stroke();
+  });
+
+  // Radar Crosshair Center
+  mmCtx.strokeStyle="rgba(16,185,129,.4)";
+  mmCtx.beginPath();
+  mmCtx.moveTo(cx-8,cyPos);mmCtx.lineTo(cx+8,cyPos);
+  mmCtx.moveTo(cx,cyPos-8);mmCtx.lineTo(cx,cyPos+8);
+  mmCtx.stroke();
+
+  // Coastline of Western India
+  mmCtx.beginPath();
+  mmCtx.moveTo(0,0);
+  mmCtx.lineTo(24,0);
+  mmCtx.lineTo(30,h*0.3);
+  mmCtx.lineTo(22,h*0.55);
+  mmCtx.lineTo(12,h*0.8);
+  mmCtx.lineTo(0,h);
+  mmCtx.closePath();
+  mmCtx.fillStyle="rgba(30,90,55,.45)";
+  mmCtx.fill();
+  mmCtx.strokeStyle="rgba(52,211,153,.6)";
+  mmCtx.lineWidth=1.2;
+  mmCtx.stroke();
+
+  // Target 3D Ocean Volume Bounding Box
+  mmCtx.strokeStyle="#38bdf8";
+  mmCtx.lineWidth=1.4;
+  mmCtx.setLineDash([4,3]);
+  mmCtx.strokeRect(36,14,w-50,h-28);
+  mmCtx.setLineDash([]);
+
+  // Active ARGO Buoy Blips with ping waves
+  const tTime=clock?clock.getElapsedTime():0;
+  [{x:48,y:32,c:"#10b981"},{x:94,y:52,c:"#38bdf8"},{x:62,y:72,c:"#f59e0b"}].forEach((b,idx)=>{
+    const pingR=3+(Math.sin(tTime*2.5+idx)*.5+.5)*5;
+    mmCtx.beginPath();
+    mmCtx.arc(b.x,b.y,pingR,0,Math.PI*2);
+    mmCtx.strokeStyle=b.c;
+    mmCtx.lineWidth=1;
+    mmCtx.globalAlpha=Math.max(0.1,0.7-pingR/8);
+    mmCtx.stroke();
+    mmCtx.globalAlpha=1;
+
+    mmCtx.beginPath();
+    mmCtx.arc(b.x,b.y,2.5,0,Math.PI*2);
+    mmCtx.fillStyle=b.c;
+    mmCtx.fill();
+  });
+
+  // Camera Orbit Position Indicator
+  const camX=cx+Math.sin(tTime*0.2)*20;
+  const camY=cyPos+(cy<0?10:-10);
+  mmCtx.fillStyle="#ffffff";
+  mmCtx.font="8px sans-serif";
+  mmCtx.fillText("▲",camX-3,camY+3);
+
+  // Coordinate Labels & Compass
+  mmCtx.font="6.5px monospace";
+  mmCtx.fillStyle="rgba(148,163,184,.7)";
+  mmCtx.fillText("N",cx-2,8);
+  mmCtx.fillText("68°E",34,h-3);
+  mmCtx.fillText("74°E",w-24,h-3);
+}
+
+// Render loop
+const clock=new THREE.Clock();
+function animate(){
+  requestAnimationFrame(animate);
+  const t=clock.getElapsedTime();
+  camera.position.y+=(targetY-camera.position.y)*.04;
+  const cy=camera.position.y;
+  if(cy<0){
+    const d=Math.abs(cy)/480;
+    scene.background.setRGB(THREE.MathUtils.lerp(.006,.002,d),THREE.MathUtils.lerp(.03,.008,d),THREE.MathUtils.lerp(.08,.03,d));
+    scene.fog.density=THREE.MathUtils.lerp(0.0016,0.0028,d);
+    ambLight.intensity=THREE.MathUtils.lerp(.75,.22,d);
+    sunLight.intensity=THREE.MathUtils.lerp(1.35,0,d);
+    uwaLight.intensity=THREE.MathUtils.lerp(0,.75,d);
+    if(skyDome) skyDome.visible=false;
+  }else{
+    scene.background.set(0x040b17);
+    scene.fog.density=0.00065;
+    ambLight.intensity=.75;
+    sunLight.intensity=1.35;
+    uwaLight.intensity=0;
+    if(skyDome) skyDome.visible=true;
+  }
+  sUni.uTime.value=t;
+  sUni.uCamPos.value.copy(camera.position);
+  if(sbUni) sbUni.uTime.value=t;
+  slices.forEach(s=>{s.position.y=s.userData.baseY+Math.sin(t*s.userData.spd+s.userData.ph)*1.6;});
+  curUniforms.uTime.value=t;
+  curUniforms.uLiveSpeed.value=LIVE_API.currentKnots || 0.82;
+  buoys.forEach((b,i)=>{b.position.y=Math.sin(t*1.8+i*1.4)*.7;b.rotation.z=Math.cos(t*1.4+i*.8)*.08;if(b.userData.ring){const rs=1+(Math.sin(t*3+i)*.5+.5)*1.5;b.userData.ring.scale.setScalar(rs);b.userData.ring.material.opacity=Math.max(.1,.6-(rs-1)*.35);}if(b.userData.beacon)b.userData.beacon.material.color.setHex(Math.sin(t*5+i)>0?0x00ffaa:0x003322);});
+  if(seabedPings) seabedPings.forEach((r,i)=>{const rs=1+(Math.sin(t*2.8+i*1.2)*.5+.5)*1.8;r.scale.setScalar(rs);r.material.opacity=Math.max(.05,.7-(rs-1)*.35);});
+  if(cameraMode==="ORBIT")controls.update();
+  const tel=getTelemetry(cy,timeIndex);
+  const as=cy>=0?"+":" ";set("hd-alt",as+Math.abs(Math.round(cy)).toString().padStart(3,"0")+" m");
+  set("hd-dep",Math.round(tel.dep).toString().padStart(3,"0")+" m");
+  set("hd-tmp",tel.temp+" \u00B0C");
+  set("hd-vel",tel.vel+" kn");
+  set("hd-sal",tel.sal+" PSU");
+  set("hd-prs",tel.pres+" bar");
+  set("hd-wav",tel.waveHeight+" m");
+  set("hd-per",tel.wavePeriod+" s");
+
+  // Center HUD Pill Update
+  const pbMode=$("pb-mode-badge");
+  const pbLayer=$("pb-layer-tag");
+  const pbVel=$("pb-vel");
+  const depVal=Math.round(tel.dep);
+  if(cy>=0){
+    if(pbMode){pbMode.textContent="🌊 SURFACE";pbMode.classList.remove("dive");}
+    if(pbLayer)pbLayer.textContent="MIXED LAYER";
+    set("pd","+"+Math.abs(Math.round(cy)).toString().padStart(3,"0")+" m");
+  }else{
+    if(pbMode){pbMode.textContent="🤿 DIVE (-"+depVal+"m)";pbMode.classList.add("dive");}
+    if(pbLayer){
+      if(depVal<90)pbLayer.textContent="MIXED LAYER";
+      else if(depVal<220)pbLayer.textContent="THERMOCLINE";
+      else pbLayer.textContent="DEEP WATER";
+    }
+    set("pd","-"+depVal.toString().padStart(3,"0")+" m");
+  }
+  set("pt",tel.temp+" °C");
+  if(pbVel)pbVel.textContent=tel.vel+" kn";
+
+  const np=1-(parseFloat(tel.temp)-4.8)/(29.5-4.8);const _cbn=$("cbn");if(_cbn)_cbn.style.top=Math.max(0,Math.min(100,np*100))+"%";
+  const _aw=$("awarn");if(_aw)_aw.style.opacity=tel.shadow?"1":".3";
+  const hrs=timeIndex*6,days=Math.floor(hrs/24),hh=hrs%24;set("tdisplay","T+"+days.toString().padStart(2,"0")+"d "+hh.toString().padStart(2,"0")+"h");
+  const _ts=$("tslide");if(_ts)_ts.value=timeIndex;const _tpb=$("tpb");if(_tpb)_tpb.textContent=isPlaying?"|| ":">";
+  drawThermo(cy);drawMinimap(cy);
+  renderer.render(scene,camera);
+}
+// ==========================================
+// 2D MYOCEAN PRO GIS INTERACTIVE MODULE
+// ==========================================
+let map2D = null;
+let sstLayerGroup = null;
+let currentsLayerGroup = null;
+let buoysLayerGroup = null;
+let selectionRect = null;
+let selectedBounds = [[16.8, 69.8], [20.4, 73.2]];
+
+const BUOYS_DATA = [
+  {id: "ARGO-IND-6902781", name: "Argo Float #6902781", lat: 18.42, lon: 71.18, temp: "27.84 °C", dep: "18.5 m", status: "OPTIMAL", depthVal: 18.5, salinity: "36.21 PSU", battery: "94%", cycle: 142, sensors: "CTD (SBE-41CP) + Aanderaa Optode DO"},
+  {id: "ARGO-IND-6902782", name: "Argo Float #6902782", lat: 16.85, lon: 73.04, temp: "25.12 °C", dep: "45.0 m", status: "OPTIMAL", depthVal: 45.0, salinity: "36.45 PSU", battery: "88%", cycle: 98, sensors: "CTD (Sea-Bird SBE-41CP)"},
+  {id: "ARGO-IND-6902783", name: "Argo Float #6902783", lat: 19.95, lon: 69.45, temp: "15.65 °C", dep: "120.0 m", status: "TRANSMITTING", depthVal: 120.0, salinity: "35.80 PSU", battery: "76%", cycle: 215, sensors: "Bio-Argo (CTD + Chl-a + Backscatter)"}
+];
+
+function getVelColor(spd) {
+  if (spd < 0.5) return "#10b981"; // Emerald
+  if (spd < 0.8) return "#00e5ff"; // Bright Cyan
+  if (spd < 1.1) return "#38bdf8"; // Ocean Blue
+  if (spd < 1.35) return "#f59e0b"; // Amber
+  return "#f43f5e"; // Coral Red
+}
+
+function getCompassDir(deg) {
+  const dirs = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+  return dirs[Math.round(deg / 22.5) % 16];
+}
+
+window.showInsituModal = function(id) {
+  const b = BUOYS_DATA.find(x => x.id === id);
+  if (!b) return;
+  if (map2D) {
+    map2D.flyTo([b.lat, b.lon], 8, { duration: 1.2 });
+  }
+  showModal({
+    id: b.id,
+    name: b.name,
+    lat: b.lat + "°N",
+    lon: b.lon + "°E",
+    depthMeters: b.dep,
+    temp: b.temp,
+    salinity: b.salinity,
+    battery: b.battery,
+    status: b.status,
+    cycle: b.cycle + " cycles",
+    sensors: b.sensors
+  });
+};
+
+function init2DMap() {
+  if (typeof L === "undefined") {
+    setTimeout(init2DMap, 300);
+    return;
+  }
+  const mapContainer = $("leaflet-map");
+  if (!mapContainer) return;
+
+  map2D = L.map("leaflet-map", {
+    center: [18.6, 71.5],
+    zoom: 6,
+    minZoom: 4,
+    maxZoom: 12,
+    zoomControl: true,
+    attributionControl: false
+  });
+
+  // High-performance Dark Ocean Basemap (Clean Esri Canvas — Zero Watermarks)
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", {
+    maxZoom: 16,
+    attribution: false
+  }).addTo(map2D);
+
+  // Subtle Coastline & Ocean Labels
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}", {
+    maxZoom: 16,
+    opacity: 0.65,
+    attribution: false
+  }).addTo(map2D);
+
+  sstLayerGroup = L.layerGroup().addTo(map2D);
+  currentsLayerGroup = L.layerGroup().addTo(map2D);
+  buoysLayerGroup = L.layerGroup().addTo(map2D);
+
+  // 1. Generate 2D Sea Surface Temperature (SST) Layer
+  const lats = [14, 16, 18, 20, 22, 24];
+  const lons = [66, 68, 70, 72, 74, 76];
+  for (let i = 0; i < lats.length - 1; i++) {
+    for (let j = 0; j < lons.length - 1; j++) {
+      const lat1 = lats[i], lat2 = lats[i+1];
+      const lon1 = lons[j], lon2 = lons[j+1];
+      const latMid = (lat1 + lat2) / 2;
+      const tVal = 29.8 - (latMid - 14) * 0.45 + (Math.sin(lon1 * 0.5) * 0.4);
+      let col = "#ff3b30";
+      if (tVal < 26.8) col = "#00c8ff";
+      else if (tVal < 27.8) col = "#00e676";
+      else if (tVal < 28.6) col = "#ffdd00";
+      else if (tVal < 29.2) col = "#ff7700";
+
+      const poly = L.rectangle([[lat1, lon1], [lat2, lon2]], {
+        color: "rgba(56,189,248,0.15)",
+        weight: 1,
+        fillColor: col,
+        fillOpacity: 0.35
+      });
+      poly.bindTooltip(`<div style="font-family:'JetBrains Mono',monospace;font-size:11px"><b>SST:</b> ${tVal.toFixed(1)} &deg;C<br><span style="color:#94a3b8">Arabian Sea Grid (${lat1}&deg;N, ${lon1}&deg;E)</span></div>`, {sticky: true});
+      sstLayerGroup.addLayer(poly);
+    }
+  }
+
+  // 2. Generate MyOcean Pro Style Current Vector Grid (Velocity color-coded arrows)
+  const arrowPoints = [
+    // Coastal boundary currents (West India Coastal Current)
+    [15.0, 73.5, 1.35, 335, "Goa Coast - WICC Poleward Flow"],
+    [16.2, 72.8, 1.25, 330, "Konkan Coast - Boundary Jet"],
+    [17.4, 72.4, 1.10, 320, "Ratnagiri - Coastal Stream"],
+    [18.8, 71.8, 0.95, 315, "Mumbai Offshore - Shelf Jet"],
+    [19.8, 71.2, 0.85, 305, "Gulf of Khambhat Outflow"],
+    [20.8, 69.8, 0.70, 290, "Saurashtra Coast"],
+    [21.8, 68.6, 0.55, 275, "Kutch Offshore"],
+    // Central Basin Gyre & Open Ocean
+    [14.5, 68.5, 0.80, 45, "Central Basin - Monsoon Drift"],
+    [15.8, 69.8, 0.90, 60, "Mid-Arabian Streamline"],
+    [17.0, 68.2, 0.65, 40, "Basin Eddy Center"],
+    [17.8, 70.2, 0.85, 80, "Transverse Jet"],
+    [18.6, 67.5, 0.45, 65, "Open Ocean Circulation"],
+    [19.5, 68.8, 0.60, 95, "Central Thermal Front"],
+    [20.5, 67.8, 0.50, 110, "North Central Stream"],
+    [21.5, 66.8, 0.40, 130, "Northern Gyre Flow"],
+    // Western Basin & Upwelling Margins
+    [14.0, 65.0, 1.15, 55, "Southern Inflow"],
+    [15.5, 64.2, 1.20, 50, "Somali Current Extension"],
+    [17.2, 65.2, 0.95, 45, "Oman Basin Margin"],
+    [18.8, 64.5, 0.75, 70, "Western Eddy Flow"],
+    [20.0, 65.0, 0.60, 90, "Ras al Hadd Jet Marginal"],
+    [22.2, 65.5, 0.50, 120, "Gulf of Oman Approach"]
+  ];
+
+  arrowPoints.forEach(([lat, lon, speed, angle, desc]) => {
+    const col = getVelColor(speed);
+    const sz = Math.round(20 + speed * 10);
+    const arrowIcon = L.divIcon({
+      className: "custom-arrow-icon",
+      html: `
+        <div class="cur-arrow-wrap" style="transform:rotate(${angle}deg);width:${sz}px;height:${sz}px;">
+          <svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" style="filter:drop-shadow(0 0 5px ${col});">
+            <path d="M12 2L12 22M12 2L6 8M12 2L18 8" stroke="${col}" stroke-width="${Math.max(2, speed * 2)}" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      `,
+      iconSize: [sz, sz],
+      iconAnchor: [sz / 2, sz / 2]
+    });
+    const m = L.marker([lat, lon], {icon: arrowIcon});
+    m.bindTooltip(`
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;line-height:1.6;padding:3px 5px;">
+        <div style="color:${col};font-weight:700;font-size:12px">⚡ ${speed.toFixed(2)} kn (${(speed * 0.5144).toFixed(2)} m/s)</div>
+        <div><b>Flow:</b> ${angle}&deg; ${getCompassDir(angle)}</div>
+        <div style="color:#94a3b8;font-size:9px">${desc}</div>
+      </div>
+    `, {sticky: true, opacity: 0.95});
+    currentsLayerGroup.addLayer(m);
+  });
+
+  // 3. ARGO Float In-Situ Buoys on 2D Map (with pulse wave rings)
+  BUOYS_DATA.forEach(b => {
+    const buoyIcon = L.divIcon({
+      className: "buoy-marker",
+      html: `
+        <div style="position:relative;width:22px;height:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+          <div style="position:absolute;inset:0;border-radius:50%;background:rgba(255,170,0,0.3);animation:ispulse 1.8s ease-in-out infinite;"></div>
+          <div style="width:12px;height:12px;border-radius:50%;background:#ffaa00;border:2px solid #ffffff;box-shadow:0 0 10px #ffaa00;"></div>
+        </div>
+      `,
+      iconSize: [22, 22],
+      iconAnchor: [11, 11]
+    });
+    const bm = L.marker([b.lat, b.lon], {icon: buoyIcon});
+    bm.bindPopup(`
+      <div style="font-family:'Plus Jakarta Sans',sans-serif;padding:6px;min-width:200px">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <b style="color:#38bdf8;font-size:13px">${b.name}</b>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:8px;padding:2px 6px;border-radius:99px;background:rgba(16,185,129,.15);color:#10b981;font-weight:700">${b.status}</span>
+        </div>
+        <span style="font-size:10px;color:#94a3b8;font-family:'JetBrains Mono',monospace;">ID: ${b.id}</span>
+        <hr style="border:0;border-top:1px solid rgba(56,189,248,.3);margin:6px 0">
+        <div style="font-size:11px;line-height:1.7;color:#f1f5f9;font-family:'JetBrains Mono',monospace;">
+          <b>Coordinates:</b> ${b.lat}&deg;N, ${b.lon}&deg;E<br>
+          <b>Live Depth:</b> ${b.dep}<br>
+          <b>Water Temp:</b> <span style="color:#f59e0b;font-weight:700">${b.temp}</span><br>
+          <b>Salinity:</b> ${b.salinity}<br>
+          <b>Cycle Count:</b> ${b.cycle} cycles<br>
+          <b>Battery:</b> ${b.battery}
+        </div>
+        <button onclick="window.showInsituModal('${b.id}')" style="margin-top:8px;width:100%;padding:5px;background:rgba(56,189,248,.18);border:1px solid #38bdf8;border-radius:5px;color:#38bdf8;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;cursor:pointer;">VIEW FULL TELEMETRY &rarr;</button>
+      </div>
+    `);
+    buoysLayerGroup.addLayer(bm);
+  });
+
+  // 4. Region Selection Bounding Box (Click on map to pick target volume)
+  selectionRect = L.rectangle(selectedBounds, {
+    color: "#38bdf8",
+    weight: 2.5,
+    dashArray: "6, 6",
+    fillColor: "#38bdf8",
+    fillOpacity: 0.16
+  }).addTo(map2D);
+
+  updateCoordsDisplay(selectedBounds);
+
+  map2D.on("click", function(e) {
+    const lat = e.latlng.lat;
+    const lng = e.latlng.lng;
+    const dLat = 1.8, dLng = 1.7;
+    selectedBounds = [
+      [Math.max(10, lat - dLat), Math.max(60, lng - dLng)],
+      [Math.min(25, lat + dLat), Math.min(78, lng + dLng)]
+    ];
+    selectionRect.setBounds(selectedBounds);
+    updateCoordsDisplay(selectedBounds);
+  });
+
+  // Layer Toggles
+  document.querySelectorAll(".layer2d-toggle").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const lyr = btn.dataset.layer2d;
+      btn.classList.toggle("active");
+      const isActive = btn.classList.contains("active");
+      if (lyr === "sst") {
+        if (isActive) map2D.addLayer(sstLayerGroup); else map2D.removeLayer(sstLayerGroup);
+      } else if (lyr === "currents") {
+        if (isActive) map2D.addLayer(currentsLayerGroup); else map2D.removeLayer(currentsLayerGroup);
+        const leg = $("cur-vel-legend");
+        if (leg) leg.style.display = isActive ? "flex" : "none";
+      } else if (lyr === "buoys" || lyr === "insitu") {
+        if (isActive) map2D.addLayer(buoysLayerGroup); else map2D.removeLayer(buoysLayerGroup);
+        const pnl = $("insitu-panel");
+        if (pnl) pnl.style.display = isActive ? "block" : "none";
+      }
+      updateActiveLayerLabel();
+    });
+  });
+}
+
+function updateCoordsDisplay(bounds) {
+  const sLat = bounds[0][0].toFixed(1), nLat = bounds[1][0].toFixed(1);
+  const wLng = bounds[0][1].toFixed(1), eLng = bounds[1][1].toFixed(1);
+  const txt = `${sLat}\u00B0N - ${nLat}\u00B0N, ${wLng}\u00B0E - ${eLng}\u00B0E`;
+  const el = $("m2d-coords");
+  if (el) el.textContent = txt;
+}
+
+function updateActiveLayerLabel() {
+  const activeNames = [];
+  document.querySelectorAll(".layer2d-toggle.active").forEach(b => {
+    activeNames.push(b.querySelector("span:last-child").textContent);
+  });
+  const el = $("m2d-region-lbl");
+  if (el) el.textContent = activeNames.join(" + ") || "BASEMAP ONLY";
+}
+
+function switchTo2D() {
+  document.body.classList.add("in-2d");
+  const overlay = $("map-2d-overlay");
+  if (overlay) overlay.classList.remove("hidden");
+  $("btn-mode-2d")?.classList.add("active");
+  $("btn-mode-3d")?.classList.remove("active");
+  if (map2D) {
+    setTimeout(() => {
+      map2D.invalidateSize();
+    }, 200);
+  }
+}
+
+function switchTo3D() {
+  document.body.classList.remove("in-2d");
+  const overlay = $("map-2d-overlay");
+  if (overlay) overlay.classList.add("hidden");
+  $("btn-mode-3d")?.classList.add("active");
+  $("btn-mode-2d")?.classList.remove("active");
+  // Smooth descent into 3D volume
+  targetY = 80;
+  camera.position.set(180, 200, 260);
+  controls.target.set(0, -80, 0);
+  controls.update();
+}
+
+$("btn-mode-2d")?.addEventListener("click", switchTo2D);
+$("btn-mode-3d")?.addEventListener("click", switchTo3D);
+$("btn-launch-3d")?.addEventListener("click", switchTo3D);
+
+// Set default 2D mode
+document.body.classList.add("in-2d");
+
+// Initialize 2D map on start
+setTimeout(init2DMap, 500);
+
+animate();
+function removeLoadingScreen() {
+  const ls = $("ls") || document.getElementById("ls");
+  if (ls) {
+    ls.style.pointerEvents = "none";
+    ls.style.transition = "opacity .4s ease-out";
+    ls.style.opacity = "0";
+    setTimeout(() => { try { ls.remove(); } catch(e) {} }, 450);
+  }
+}
+setTimeout(removeLoadingScreen, 500);
+window.addEventListener("DOMContentLoaded", removeLoadingScreen);
+window.addEventListener("load", removeLoadingScreen);
+setTimeout(() => { try { const el = document.getElementById("ls"); if (el) el.remove(); } catch(e) {} }, 1200);
+
+</script>
+</body>
+</html>

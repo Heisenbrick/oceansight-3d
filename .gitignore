@@ -1,0 +1,20 @@
+# Environments & Virtual Envs
+.venv/
+env/
+venv/
+ENV/
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# System files
+.DS_Store
+Thumbs.db
+desktop.ini
+*.tmp
+
+# Local logs
+*.log
