@@ -223,88 +223,83 @@ remove_shape_by_name(s2, "TextBox 8")
 sub2 = create_shape(s2, 5, 0.50, 1.15, 12.33, 0.38, fill=CARD_BLUE, line_color=CYAN, line_width=Pt(1), radius=0.25)
 set_shape_text(sub2, "★ OCEANSIGHT 3D: Cloud-Native 3D WebGIS Platform for Ocean Numerical Models & In-Situ Sensor Telemetry", size=10, bold=True, color=NAVY)
 
-# Left Column: Structured Cards Addressing All 4 Mandatory Pointers
-col_left_w = 6.65
-c1_y = 1.62
+# Slide 2 Layout: 2 Columns covering Problem + Current Tool Drawbacks + Solution + Prototype
+col_w = 6.10
+c1_y = 1.58
 
-# Card 1: Proposed Solution & Detailed Working (Pointer 1 & 2)
-c1 = add_card(s2, 0.50, c1_y, col_left_w, 1.60, fill=WHITE, border=CYAN, border_w=Pt(1.2), radius=0.08)
+# Card 1 (Left Top): The Real Problem & Operational Pain Points (Coral)
+c1_h = 2.45
+c1 = add_card(s2, 0.50, c1_y, col_w, c1_h, fill=WHITE, border=CORAL, border_w=Pt(1.2), radius=0.08)
 tf1 = c1.text_frame; tf1.word_wrap = True; tf1.margin_left = Inches(0.12); tf1.margin_top = Inches(0.08)
 p1 = tf1.paragraphs[0]
-r = p1.add_run(); r.text = "1. PROPOSED SOLUTION & DETAILED WORKING (Idea / Prototype)\n"; r.font.bold = True; r.font.size = Pt(9.8); r.font.color.rgb = CYAN
+r = p1.add_run(); r.text = "1. THE REAL PROBLEM & PAIN POINTS (Why Current Systems Fail)\n"; r.font.bold = True; r.font.size = Pt(9.5); r.font.color.rgb = CORAL
 
 bullets_c1 = [
-    ("• Cloud-Native WebGL Architecture: ", "Zero-install web platform transforming 15 GB NetCDF numerical ocean models (ROMS, WaveWatch III) into interactive 3D in standard web browsers."),
-    ("• End-to-End Data Pipeline: ", "Python backend slices multi-dimensional rasters into Cloud-Native Zarr binary stores; streams lightweight 10 KB depth chunks on-demand via FastAPI."),
-    ("• Dual-Mode Tactical Navigation: ", "Instant 1-click toggle between 2D Leaflet GIS tactical situational map and full 3D volumetric ocean space.")
+    ("• 15 GB NetCDF Data Silos: ", "Massive multi-gigabyte models choke marine satellite bandwidth ($50,000+ over VSAT), isolating frontline ships at sea."),
+    ("• 2D Flat Slicing Bottleneck: ", "Static 2D charts completely hide continuous 0m–500m thermocline gradients, acoustic shadow zones, and internal wave shear."),
+    ("• Disconnected In-Situ Data: ", "Numerical forecast grids and physical sensor observations (ARGO floats, buoys) remain trapped in separate siloed tools.")
 ]
 for b_h, b_t in bullets_c1:
-    p = tf1.add_paragraph(); p.space_after = Pt(1.5)
-    r1 = p.add_run(); r1.text = b_h; r1.font.bold = True; r1.font.size = Pt(8.2); r1.font.color.rgb = NAVY
-    r2 = p.add_run(); r2.text = b_t; r2.font.size = Pt(8.0); r2.font.color.rgb = MIDTEXT
+    p = tf1.add_paragraph(); p.space_after = Pt(2)
+    r1 = p.add_run(); r1.text = b_h; r1.font.bold = True; r1.font.size = Pt(8.0); r1.font.color.rgb = NAVY
+    r2 = p.add_run(); r2.text = b_t; r2.font.size = Pt(7.8); r2.font.color.rgb = MIDTEXT
 
-# Card 2: How It Addresses The Core Problem (Pointer 3)
-c2_y = c1_y + 1.68
-c2 = add_card(s2, 0.50, c2_y, col_left_w, 1.60, fill=WHITE, border=TEAL, border_w=Pt(1.2), radius=0.08)
+# Card 2 (Left Bottom): Drawbacks of Current Tools & Websites (Amber)
+c2_y = c1_y + c1_h + 0.12
+c2_h = 2.65
+c2 = add_card(s2, 0.50, c2_y, col_w, c2_h, fill=WHITE, border=AMBER, border_w=Pt(1.2), radius=0.08)
 tf2 = c2.text_frame; tf2.word_wrap = True; tf2.margin_left = Inches(0.12); tf2.margin_top = Inches(0.08)
 p2 = tf2.paragraphs[0]
-r = p2.add_run(); r.text = "2. HOW IT ADDRESSES THE PROBLEM (Pain Points Solved)\n"; r.font.bold = True; r.font.size = Pt(9.8); r.font.color.rgb = TEAL
+r = p2.add_run(); r.text = "2. DRAWBACKS OF CURRENT TOOLS & WEBSITES (Why Existing Tools Fall Short)\n"; r.font.bold = True; r.font.size = Pt(9.5); r.font.color.rgb = AMBER
 
 bullets_c2 = [
-    ("• Eliminates Workstation Monopoly: ", "Replaces multi-lakh desktop suites (ArcGIS 3D, Petrel); runs at 60 FPS on bridge laptops, mobile tablets, and field devices."),
-    ("• 99.9% Satellite Bandwidth Reduction: ", "Replaces unviable 15 GB raw file downloads ($50,000+ over marine VSAT) with micro 10 KB on-demand binary slices (< ₹0.10/query)."),
-    ("• Eliminates 2D Subsurface Blind Spots: ", "Reveals continuous 0m → 500m thermocline gradient layers, internal wave shear, and acoustic shadow zones invisible on flat charts.")
+    ("• NASA Panoply (NASA GISS): ", "Desktop-only Java app; static 2D planar contour plots; zero 3D volumetric raymarching; no real-time telemetry; zero web sharing."),
+    ("• Copernicus MyOcean (EU CMEMS): ", "Pseudo-2.5D surface globe; lacks true continuous depth slicing; heavy network latency; disconnected from live in-situ buoys."),
+    ("• ParaView / VisIt / ArcGIS 3D: ", "Exorbitant ₹15L–₹40L licenses; demands dedicated ₹5L GPU workstations; complex academic UI; unviable for field bridge laptops.")
 ]
 for b_h, b_t in bullets_c2:
-    p = tf2.add_paragraph(); p.space_after = Pt(1.5)
-    r1 = p.add_run(); r1.text = b_h; r1.font.bold = True; r1.font.size = Pt(8.2); r1.font.color.rgb = NAVY
-    r2 = p.add_run(); r2.text = b_t; r2.font.size = Pt(8.0); r2.font.color.rgb = MIDTEXT
+    p = tf2.add_paragraph(); p.space_after = Pt(2)
+    r1 = p.add_run(); r1.text = b_h; r1.font.bold = True; r1.font.size = Pt(8.0); r1.font.color.rgb = NAVY
+    r2 = p.add_run(); r2.text = b_t; r2.font.size = Pt(7.8); r2.font.color.rgb = MIDTEXT
 
-# Card 3: Innovation and Uniqueness of the Solution (Pointer 4)
-c3_y = c2_y + 1.68
-c3 = add_card(s2, 0.50, c3_y, col_left_w, 1.65, fill=WHITE, border=AMBER, border_w=Pt(1.2), radius=0.08)
+# Right Column: Solution, Innovation & Prototype Showcase
+col_r_x = 6.80
+col_r_w = 6.03
+
+# Card 3 (Right Top): Proposed Solution & Innovation (Cyan)
+c3_h = 2.45
+c3 = add_card(s2, col_r_x, c1_y, col_r_w, c3_h, fill=WHITE, border=CYAN, border_w=Pt(1.2), radius=0.08)
 tf3 = c3.text_frame; tf3.word_wrap = True; tf3.margin_left = Inches(0.12); tf3.margin_top = Inches(0.08)
 p3 = tf3.paragraphs[0]
-r = p3.add_run(); r.text = "3. INNOVATION & UNIQUENESS OF THE SOLUTION (Global First)\n"; r.font.bold = True; r.font.size = Pt(9.8); r.font.color.rgb = AMBER
+r = p3.add_run(); r.text = "3. PROPOSED SOLUTION & INNOVATION (OceanSight 3D — Global First)\n"; r.font.bold = True; r.font.size = Pt(9.5); r.font.color.rgb = CYAN
 
 bullets_c3 = [
-    ("★ World's First True 3D Ocean WebGIS: ", "First web application combining full volumetric depth raymarching with live numerical ocean model outputs (Copernicus/Panoply are desktop/2D)."),
-    ("• Real-Time Gerstner Wave Shaders: ", "Physically accurate directional ocean swell displacement driven directly by WaveWatch III spectral energy formulas."),
-    ("• Simulation-Sensor Ground Truth Fusion: ", "Simultaneously renders 4D ROMS forecast grids alongside live in-situ ARGO profiling floats in unified 3D coordinates.")
+    ("• Cloud-Native Zarr Streaming: ", "99.9% bandwidth cut (15 GB ➔ 10 KB on-demand binary slices over standard 4G or marine VSAT)."),
+    ("• Zero-Install WebGL Engine: ", "High-performance 60 FPS 3D volumetric depth raymarching in standard Chrome/Edge on existing laptops, tablets, or phones."),
+    ("• Continuous 0m–500m Slicing: ", "Exposes real-time thermocline gradients, acoustic shadow zones, and SOFAR sound channels."),
+    ("★ Global First Innovation: ", "World's first web platform combining numerical ocean physics (ROMS/WW3), Gerstner wave displacement, and live ARGO floats.")
 ]
 for b_h, b_t in bullets_c3:
-    p = tf3.add_paragraph(); p.space_after = Pt(1.5)
-    r1 = p.add_run(); r1.text = b_h; r1.font.bold = True; r1.font.size = Pt(8.2); r1.font.color.rgb = NAVY
-    r2 = p.add_run(); r2.text = b_t; r2.font.size = Pt(8.0); r2.font.color.rgb = MIDTEXT
+    p = tf3.add_paragraph(); p.space_after = Pt(2)
+    r1 = p.add_run(); r1.text = b_h; r1.font.bold = True; r1.font.size = Pt(8.0); r1.font.color.rgb = NAVY
+    r2 = p.add_run(); r2.text = b_t; r2.font.size = Pt(7.8); r2.font.color.rgb = MIDTEXT
 
-# Right Column: Visual Showcase & Prototype Verification
-col_right_x = 7.35
-col_right_w = 5.48
-
-# Top Screenshot Card: Wave Surface
-sc1_h = 2.45
-add_card(s2, col_right_x, c1_y, col_right_w, sc1_h, fill=NAVY_MID, border=CYAN, border_w=Pt(1.2), radius=0.06)
+# Card 4 (Right Bottom): Live Prototype Verification & Performance
+c4_y = c2_y
+c4_h = c2_h
+add_card(s2, col_r_x, c4_y, col_r_w, c4_h, fill=NAVY_MID, border=TEAL, border_w=Pt(1.2), radius=0.06)
 if os.path.exists(IMG_SURFACE):
-    add_fitted_picture(s2, IMG_SURFACE, col_right_x, c1_y, col_right_w, sc1_h - 0.35, pad_x=0.05, pad_y=0.05)
-cap1 = create_shape(s2, 1, col_right_x, c1_y + sc1_h - 0.32, col_right_w, 0.32, fill=NAVY, line_color=None)
-set_shape_text(cap1, "🌊 Volumetric Thermocline & Gerstner Waves (Three.js WebGL Engine)", size=8.5, bold=True, color=CYAN_BRIGHT)
-
-# Bottom Screenshot Card: Depth Slicing
-sc2_y = c1_y + sc1_h + 0.12
-sc2_h = 2.05
-add_card(s2, col_right_x, sc2_y, col_right_w, sc2_h, fill=NAVY_MID, border=TEAL, border_w=Pt(1.2), radius=0.06)
-if os.path.exists(IMG_THERMO):
-    add_fitted_picture(s2, IMG_THERMO, col_right_x, sc2_y, col_right_w, sc2_h - 0.32, pad_x=0.05, pad_y=0.04)
-cap2 = create_shape(s2, 1, col_right_x, sc2_y + sc2_h - 0.30, col_right_w, 0.30, fill=NAVY, line_color=None)
-set_shape_text(cap2, "📍 Continuous 0m–500m Subsurface Acoustic Shadow Slicing", size=8.5, bold=True, color=BORDER_CYAN)
+    add_fitted_picture(s2, IMG_SURFACE, col_r_x, c4_y, col_r_w, c4_h - 0.70, pad_x=0.05, pad_y=0.04)
+cap_pr2 = create_shape(s2, 1, col_r_x, c4_y + c4_h - 0.65, col_r_w, 0.30, fill=NAVY, line_color=None)
+set_shape_text(cap_pr2, "🌊 Live Prototype: Volumetric Thermocline & Gerstner Wave Shader Engine", size=8.5, bold=True, color=CYAN_BRIGHT)
 
 # Bottom Spec Chips
-pills_s2 = ["★ 100% In-Browser WebGL", "✓ Zero-Install FOSS Stack", "✓ 99.9% Bandwidth Cut"]
-pw_s2 = (col_right_w - 0.20) / 3.0
+pills_s2 = ["★ World's 1st 3D WebGIS", "✓ Zero-Install FOSS", "✓ 99.9% Bandwidth Cut"]
+pw_s2 = (col_r_w - 0.20) / 3.0
 for pi, p_txt in enumerate(pills_s2):
-    px = col_right_x + pi * (pw_s2 + 0.10)
-    p_shp = create_shape(s2, 5, px, sc2_y + sc2_h + 0.08, pw_s2, 0.30, fill=NAVY, line_color=AMBER if "★" in p_txt else CYAN, line_width=Pt(1), radius=0.3)
-    set_shape_text(p_shp, p_txt, size=7.8, bold=True, color=AMBER_LIGHT if "★" in p_txt else WHITE)
+    px = col_r_x + pi * (pw_s2 + 0.10)
+    p_shp = create_shape(s2, 5, px, c4_y + c4_h - 0.32, pw_s2, 0.28, fill=NAVY_DEEP, line_color=AMBER if "★" in p_txt else CYAN, line_width=Pt(1), radius=0.3)
+    set_shape_text(p_shp, p_txt, size=7.5, bold=True, color=AMBER_LIGHT if "★" in p_txt else WHITE)
 
 
 # ==============================================================================
@@ -695,8 +690,10 @@ if len(prs.slides) > 6:
 # SAVE PRESENTATION TO MULTIPLE LOCATIONS
 # ==============================================================================
 targets = [
-    r"C:\Users\ayush\Desktop\OceanSight_SIH2026_Official_6Slides.pptx",
     r"C:\Users\ayush\Downloads\OceanSight_SIH2026_Official_6Slides.pptx",
+    r"C:\Users\ayush\Downloads\OceanSight_SIH2026_Final_6Slides.pptx",
+    r"C:\Users\ayush\Downloads\OceanSight_SIH2026_Official.pptx",
+    r"C:\Users\ayush\Desktop\OceanSight_SIH2026_Official_6Slides.pptx",
     r"C:\Users\ayush\Downloads\Telegram Desktop\OceanSight_SIH2026_Official_6Slides.pptx"
 ]
 
