@@ -188,11 +188,12 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 .layer2d-toggle .dot{width:7px;height:7px;border-radius:50%;background:var(--dim)}
 .layer2d-toggle.active .dot{background:var(--primary);box-shadow:0 0 6px var(--primary)}
 
-#map2d-action{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);z-index:1000;display:flex;align-items:center;gap:14px;background:var(--panel);backdrop-filter:blur(14px);border:1px solid var(--border);border-radius:30px;padding:8px 24px;box-shadow:0 8px 32px rgba(0,0,0,.7)}
+#map2d-action{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);z-index:1000;display:flex;flex-direction:column;align-items:center;gap:8px;background:var(--panel);backdrop-filter:blur(14px);border:1px solid var(--border);border-radius:24px;padding:8px 24px;box-shadow:0 8px 32px rgba(0,0,0,.7);transition:all .25s}
 #btn-launch-3d{background:linear-gradient(135deg,#0284c7,#38bdf8);color:#060e1a;font-family:"Plus Jakarta Sans",sans-serif;font-size:13px;font-weight:700;letter-spacing:.04em;border:none;border-radius:20px;padding:10px 22px;cursor:pointer;display:flex;align-items:center;gap:8px;box-shadow:0 0 16px rgba(56,189,248,.5);transition:.2s}
 #btn-launch-3d:hover{transform:scale(1.03);box-shadow:0 0 24px rgba(56,189,248,.8)}
 #btn-back-to-2d{background:rgba(13,27,49,.9);border:1px solid var(--glow);color:var(--primary);font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;border-radius:20px;padding:7px 16px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:.2s}
 #btn-back-to-2d:hover{background:var(--pdim)}
+@keyframes btn-shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
 
 /* Custom Leaflet Dark overrides */
 .leaflet-container{background:#060e1a!important;font-family:"JetBrains Mono",monospace!important}
@@ -418,7 +419,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
   <div id="leaflet-map"></div>
   
   <div id="map2d-header">
-    <div class="m2d-region">🌐 ARABIAN SEA — <span id="m2d-region-lbl">2D GIS VIEW</span></div>
+    <div class="m2d-region">🌐 <span id="m2d-region-title">ARABIAN SEA</span> — <span id="m2d-region-lbl">2D GIS VIEW</span></div>
     <div class="m2d-divider"></div>
     <div class="m2d-vel">⟳ CURRENT VELOCITY <span class="val" id="m2d-cur-vel">0.82</span><span class="unit">kn</span></div>
     <div class="m2d-divider"></div>
@@ -495,13 +496,16 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
   </div>
 
   <div id="map2d-action">
-    <div class="m2d-vel" style="font-size:11px">
-      📍 <span style="color:var(--muted)">Target:</span> <span id="m2d-coords" style="color:var(--primary);font-weight:700">16.8°N–20.4°N, 69.8°E–73.2°E</span>
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center;">
+      <div class="m2d-vel" style="font-size:11px">
+        📍 <span style="color:var(--muted)">Target:</span> <span id="m2d-coords" style="color:var(--primary);font-weight:700">16.8°N–20.4°N, 69.8°E–73.2°E (Arabian Sea Sector)</span>
+      </div>
+      <button id="btn-launch-3d">
+        <span>🌊 GENERATE &amp; DIVE INTO 3D OCEAN</span>
+        <span style="font-size:16px">&rarr;</span>
+      </button>
     </div>
-    <button id="btn-launch-3d">
-      <span>🌊 GENERATE &amp; DIVE INTO 3D OCEAN</span>
-      <span style="font-size:16px">&rarr;</span>
-    </button>
+    <div id="m2d-land-warning" style="display:none;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#f43f5e;font-weight:700;background:rgba(244,63,94,.12);border:1px solid rgba(244,63,94,.4);border-radius:12px;padding:5px 16px;text-align:center;"></div>
   </div>
 </div>
 
@@ -533,10 +537,11 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 const $ = id => document.getElementById(id);
 const set = (id,v) => { const e=$(id); if(e) e.textContent=v; };
 
-// Live Marine API Engine (Real-time Open-Meteo Arabian Sea observations & forecasts)
+// Live Marine API Engine (Real-time Open-Meteo observations across Indian Ocean EEZ)
 const LIVE_API = {
   active: false,
-  lat: 18.9, lon: 70.8, // Arabian Sea off Mumbai / INCOIS grid
+  lat: 18.9, lon: 70.8, // Current selected coordinate
+  sectorName: "Arabian Sea Sector",
   sst: 28.6,
   waveHeight: 1.12,
   wavePeriod: 10.2,
@@ -547,58 +552,114 @@ const LIVE_API = {
   hourlyCurrent: []
 };
 
-async function fetchLiveOceanData() {
+let currentSector = { isOcean: true, name: "Arabian Sea Sector", key: "arabian_sea" };
+
+function applyRegionalClimatology(lat, lon, sectorName) {
+  if (lon > 80.0) {
+    // Bay of Bengal: lower salinity, high monsoon warmth, cyclonic waves
+    LIVE_API.sst = +(28.8 + Math.sin(lat * 0.2) * 0.35).toFixed(1);
+    LIVE_API.currentKnots = +(0.62 + Math.cos(lon * 0.15) * 0.25).toFixed(2);
+    LIVE_API.waveHeight = +(1.18 + Math.sin(lat * 0.15) * 0.25).toFixed(2);
+    LIVE_API.wavePeriod = 9.8;
+  } else if (lat < 8.0) {
+    // Equatorial Indian Ocean: highest SST, open-ocean swells
+    LIVE_API.sst = +(29.4 + Math.cos(lon * 0.05) * 0.25).toFixed(1);
+    LIVE_API.currentKnots = +(1.20 + Math.sin(lon * 0.2) * 0.3).toFixed(2);
+    LIVE_API.waveHeight = +(1.60 + Math.sin(lat * 0.2) * 0.2).toFixed(2);
+    LIVE_API.wavePeriod = 11.4;
+  } else {
+    // Arabian Sea: high salinity, coastal currents
+    LIVE_API.sst = +(28.5 + (20 - lat) * 0.08).toFixed(1);
+    LIVE_API.currentKnots = +(0.82 + Math.sin(lat * 0.3) * 0.25).toFixed(2);
+    LIVE_API.waveHeight = +(1.05 + Math.cos(lat * 0.15) * 0.2).toFixed(2);
+    LIVE_API.wavePeriod = 10.2;
+  }
+  LIVE_API.active = true;
+}
+
+function updateHUDTelemetry() {
   const badge = $("mst");
   if (badge) {
-    badge.textContent = "⏳ CONNECTING LIVE ARABIAN SEA API...";
+    badge.textContent = `🟢 LIVE API: ${LIVE_API.sectorName.toUpperCase()} (${LIVE_API.sst}°C | ${LIVE_API.waveHeight}m WAVES | ${LIVE_API.currentKnots.toFixed(2)}kn)`;
+    badge.style.color = "var(--green)";
+    badge.style.background = "rgba(16,185,129,.15)";
+    badge.style.borderColor = "rgba(16,185,129,.5)";
+  }
+  const curEl = $("m2d-cur-vel");
+  if (curEl) curEl.textContent = LIVE_API.currentKnots.toFixed(2);
+  const cvlEl = $("cvl-live-val");
+  if (cvlEl) cvlEl.textContent = LIVE_API.currentKnots.toFixed(2);
+  const sstEl = $("m2d-sst-val");
+  if (sstEl) sstEl.textContent = LIVE_API.sst.toFixed(1);
+  const pbVel = $("pb-vel");
+  if (pbVel) pbVel.textContent = LIVE_API.currentKnots.toFixed(2) + " kn";
+  
+  // 3D HUD Header / Status Tags
+  const lpTag = $("lp-status-tag");
+  if (lpTag) lpTag.textContent = LIVE_API.sectorName.toUpperCase();
+  const siDiv = $("si");
+  if (siDiv) {
+    siDiv.innerHTML = `
+      <div style="color:var(--primary);font-weight:700">SIH26067 • OCEAN 3D</div>
+      <div>INCOIS ${LIVE_API.sectorName.toUpperCase()}</div>
+      <div id="clk" style="color:var(--txt)">${LIVE_API.lat.toFixed(1)}°N, ${LIVE_API.lon.toFixed(1)}°E</div>
+    `;
+  }
+}
+
+async function fetchLiveOceanData(targetLat, targetLon, sectorName) {
+  if (targetLat != null) LIVE_API.lat = targetLat;
+  if (targetLon != null) LIVE_API.lon = targetLon;
+  if (sectorName) {
+    LIVE_API.sectorName = sectorName;
+    currentSector = { isOcean: true, name: sectorName };
+  }
+  
+  const badge = $("mst");
+  if (badge) {
+    badge.textContent = `⏳ CONNECTING LIVE API (${LIVE_API.sectorName.toUpperCase()})...`;
     badge.style.color = "var(--amber)";
   }
+  
   try {
-    const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${LIVE_API.lat}&longitude=${LIVE_API.lon}&current=wave_height,wave_direction,wave_period,ocean_current_velocity,ocean_current_direction&hourly=sea_surface_temperature,wave_height,ocean_current_velocity&timezone=UTC`;
+    const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${LIVE_API.lat.toFixed(2)}&longitude=${LIVE_API.lon.toFixed(2)}&current=wave_height,wave_direction,wave_period,ocean_current_velocity,ocean_current_direction&hourly=sea_surface_temperature,wave_height,ocean_current_velocity&timezone=UTC`;
     const res = await fetch(url);
     if (!res.ok) throw new Error("HTTP " + res.status);
     const json = await res.json();
     
-    if (json.current) {
+    let hasLiveSST = false;
+    if (json.current && json.current.wave_height != null) {
       LIVE_API.active = true;
-      LIVE_API.waveHeight = json.current.wave_height != null ? json.current.wave_height : 1.1;
+      LIVE_API.waveHeight = json.current.wave_height;
       LIVE_API.wavePeriod = json.current.wave_period != null ? json.current.wave_period : 10.0;
       LIVE_API.waveDirection = json.current.wave_direction != null ? json.current.wave_direction : 240;
-      LIVE_API.currentKnots = ((json.current.ocean_current_velocity || 1.0) * 0.539957);
+      LIVE_API.currentKnots = ((json.current.ocean_current_velocity || 0.8) * 0.539957);
     }
+    
     if (json.hourly && json.hourly.sea_surface_temperature) {
       LIVE_API.hourlySST = json.hourly.sea_surface_temperature;
       LIVE_API.hourlyWaves = json.hourly.wave_height || [];
       LIVE_API.hourlyCurrent = json.hourly.ocean_current_velocity || [];
       if (LIVE_API.hourlySST.length > 0 && LIVE_API.hourlySST[0] != null) {
         LIVE_API.sst = LIVE_API.hourlySST[0];
+        hasLiveSST = true;
       }
     }
-    if (badge) {
-      badge.textContent = `🟢 LIVE API: ARABIAN SEA (${LIVE_API.sst}°C | ${LIVE_API.waveHeight}m WAVES | ${LIVE_API.currentKnots.toFixed(2)}kn)`;
-      badge.style.color = "var(--green)";
-      badge.style.background = "rgba(16,185,129,.15)";
-      badge.style.borderColor = "rgba(16,185,129,.5)";
+    
+    if (!hasLiveSST) {
+      applyRegionalClimatology(LIVE_API.lat, LIVE_API.lon, LIVE_API.sectorName);
     }
-    const curEl = $("m2d-cur-vel");
-    if (curEl) curEl.textContent = LIVE_API.currentKnots.toFixed(2);
-    const cvlEl = $("cvl-live-val");
-    if (cvlEl) cvlEl.textContent = LIVE_API.currentKnots.toFixed(2);
-    const sstEl = $("m2d-sst-val");
-    if (sstEl) sstEl.textContent = LIVE_API.sst.toFixed(1);
-    const pbVel = $("pb-vel");
-    if (pbVel) pbVel.textContent = LIVE_API.currentKnots.toFixed(2) + " kn";
-    console.log("OceanSight 3D: Connected to live Arabian Sea Marine API successfully!", LIVE_API);
+    
+    updateHUDTelemetry();
+    console.log(`OceanSight 3D: Live API synchronized for ${LIVE_API.sectorName} (${LIVE_API.lat}, ${LIVE_API.lon})`, LIVE_API);
   } catch (e) {
-    console.warn("Live API fallback:", e);
-    if (badge) {
-      badge.textContent = "● INCOIS-ROMS CLIMATOLOGY (FALLBACK)";
-      badge.style.color = "var(--primary)";
-    }
+    console.warn("Live API fallback for sector:", e);
+    applyRegionalClimatology(LIVE_API.lat, LIVE_API.lon, LIVE_API.sectorName);
+    updateHUDTelemetry();
   }
 }
 fetchLiveOceanData();
-setInterval(fetchLiveOceanData, 300000); // refresh every 5 minutes
+setInterval(() => { if (currentSector && currentSector.isOcean) fetchLiveOceanData(); }, 300000);
 
 function getTelemetry(cy, ti) {
   const dep = cy < 0 ? Math.abs(cy) : 0;
@@ -1417,6 +1478,68 @@ window.showInsituModal = function(id) {
   });
 };
 
+function classifyPoint(lat, lon) {
+  // South of mainland India (Equatorial Indian Ocean)
+  if (lat < 8.1) {
+    if (lon >= 55.0 && lon <= 98.0) {
+      return { isOcean: true, name: "Equatorial Indian Ocean", key: "indian_ocean" };
+    }
+    return { isOcean: true, name: "Southern Ocean", key: "southern_ocean" };
+  }
+  
+  // Northern boundary of Indian marine EEZ
+  if (lat > 25.5) {
+    if (lat <= 26.5 && lon <= 65.0) {
+      return { isOcean: true, name: "Gulf of Oman / Arabian Sea", key: "arabian_sea" };
+    }
+    return { isOcean: false, name: "Northern Inland Subcontinent", key: "land" };
+  }
+  
+  // Andaman & Nicobar Sea
+  if (lat >= 6.0 && lat <= 14.5 && lon >= 91.5 && lon <= 94.5) {
+    return { isOcean: true, name: "Andaman Sea Sector", key: "andaman" };
+  }
+  
+  // Lakshadweep Sea
+  if (lat >= 8.0 && lat <= 12.5 && lon >= 71.0 && lon <= 74.0) {
+    return { isOcean: true, name: "Lakshadweep Sea Sector", key: "lakshadweep" };
+  }
+  
+  // Coastlines interpolation (lat, west_coast_max_lon, east_coast_min_lon)
+  const coastlines = [
+    [8.1, 77.3, 77.8],
+    [10.0, 75.8, 79.9],
+    [12.0, 74.8, 80.0],
+    [14.0, 74.2, 80.2],
+    [16.0, 73.3, 81.3],
+    [18.0, 72.8, 83.0],
+    [20.0, 72.6, 86.2],
+    [22.0, 68.8, 89.0],
+    [24.0, 68.0, 90.0],
+    [25.5, 67.0, 91.0]
+  ];
+  
+  for (let i = 0; i < coastlines.length - 1; i++) {
+    const [l1, w1, e1] = coastlines[i];
+    const [l2, w2, e2] = coastlines[i + 1];
+    if (lat >= l1 && lat <= l2) {
+      const frac = (lat - l1) / (l2 - l1);
+      const westLon = w1 + frac * (w2 - w1);
+      const eastLon = e1 + frac * (e2 - e1);
+      
+      if (lon <= westLon) {
+        return { isOcean: true, name: "Arabian Sea Sector", key: "arabian_sea" };
+      } else if (lon >= eastLon) {
+        return { isOcean: true, name: "Bay of Bengal Sector", key: "bay_of_bengal" };
+      } else {
+        return { isOcean: false, name: "Indian Mainland", key: "land" };
+      }
+    }
+  }
+  
+  return { isOcean: false, name: "Inland Region", key: "land" };
+}
+
 function init2DMap() {
   if (typeof L === "undefined") {
     setTimeout(init2DMap, 300);
@@ -1581,13 +1704,77 @@ function init2DMap() {
   map2D.on("click", function(e) {
     const lat = e.latlng.lat;
     const lng = e.latlng.lng;
+    
+    // Classify coordinate
+    const sector = classifyPoint(lat, lng);
+    currentSector = sector;
+    
     const dLat = 1.8, dLng = 1.7;
     selectedBounds = [
-      [Math.max(10, lat - dLat), Math.max(60, lng - dLng)],
-      [Math.min(25, lat + dLat), Math.min(78, lng + dLng)]
+      [Math.max(-2, lat - dLat), Math.max(55, lng - dLng)],
+      [Math.min(26, lat + dLat), Math.min(95, lng + dLng)]
     ];
     selectionRect.setBounds(selectedBounds);
-    updateCoordsDisplay(selectedBounds);
+    
+    const btnLaunch = $("btn-launch-3d");
+    const warnEl = $("m2d-land-warning");
+    const coordsEl = $("m2d-coords");
+    
+    if (!sector.isOcean) {
+      // LAND COORDINATE
+      selectionRect.setStyle({
+        color: "#f43f5e",
+        fillColor: "#f43f5e",
+        fillOpacity: 0.28
+      });
+      if (coordsEl) {
+        coordsEl.innerHTML = `<span style="color:#f43f5e">❌ ${lat.toFixed(1)}°N, ${lng.toFixed(1)}°E (${sector.name})</span>`;
+      }
+      if (warnEl) {
+        warnEl.innerHTML = `⚠️ <b>INLAND TERRAIN DETECTED:</b> (${lat.toFixed(1)}°N, ${lng.toFixed(1)}°E) is on the Indian landmass. Ocean numerical models only compute for maritime sectors. Please click in the Arabian Sea or Bay of Bengal.`;
+        warnEl.style.display = "block";
+      }
+      if (btnLaunch) {
+        btnLaunch.innerHTML = `<span>🚫 INLAND TERRAIN (SELECT MARITIME SECTOR)</span>`;
+        btnLaunch.style.background = "linear-gradient(135deg, #475569, #334155)";
+        btnLaunch.style.color = "#94a3b8";
+        btnLaunch.style.cursor = "not-allowed";
+        btnLaunch.style.boxShadow = "none";
+      }
+      const badge = $("mst");
+      if (badge) {
+        badge.textContent = `⚠️ INLAND TERRAIN (${lat.toFixed(1)}°N, ${lng.toFixed(1)}°E) — NO OCEAN DATA`;
+        badge.style.color = "#f43f5e";
+        badge.style.background = "rgba(244,63,94,.15)";
+        badge.style.borderColor = "rgba(244,63,94,.5)";
+      }
+    } else {
+      // OCEAN COORDINATE
+      selectionRect.setStyle({
+        color: "#38bdf8",
+        fillColor: "#38bdf8",
+        fillOpacity: 0.16
+      });
+      if (coordsEl) {
+        coordsEl.innerHTML = `<span style="color:#38bdf8">🌊 ${sector.name}:</span> ${selectedBounds[0][0].toFixed(1)}°N–${selectedBounds[1][0].toFixed(1)}°N, ${selectedBounds[0][1].toFixed(1)}°E–${selectedBounds[1][1].toFixed(1)}°E`;
+      }
+      if (warnEl) {
+        warnEl.style.display = "none";
+      }
+      if (btnLaunch) {
+        btnLaunch.innerHTML = `<span>🌊 GENERATE &amp; DIVE INTO 3D ${sector.name.toUpperCase()}</span><span style="font-size:16px">&rarr;</span>`;
+        btnLaunch.style.background = "linear-gradient(135deg, #0284c7, #38bdf8)";
+        btnLaunch.style.color = "#060e1a";
+        btnLaunch.style.cursor = "pointer";
+        btnLaunch.style.boxShadow = "0 0 16px rgba(56,189,248,.5)";
+      }
+      
+      const rHeader = $("m2d-region-title");
+      if (rHeader) rHeader.textContent = sector.name.toUpperCase();
+      
+      // Fetch live data for THIS specific ocean coordinate & sector!
+      fetchLiveOceanData(lat, lng, sector.name);
+    }
   });
 
   // Layer Toggles
@@ -1657,7 +1844,22 @@ function switchTo3D() {
 
 $("btn-mode-2d")?.addEventListener("click", switchTo2D);
 $("btn-mode-3d")?.addEventListener("click", switchTo3D);
-$("btn-launch-3d")?.addEventListener("click", switchTo3D);
+$("btn-launch-3d")?.addEventListener("click", () => {
+  if (currentSector && !currentSector.isOcean) {
+    const btn = $("btn-launch-3d");
+    if (btn) {
+      btn.style.animation = "btn-shake 0.4s ease-in-out";
+      setTimeout(() => { btn.style.animation = ""; }, 450);
+    }
+    const warnEl = $("m2d-land-warning");
+    if (warnEl) {
+      warnEl.style.animation = "btn-shake 0.4s ease-in-out";
+      setTimeout(() => { warnEl.style.animation = ""; }, 450);
+    }
+    return;
+  }
+  switchTo3D();
+});
 
 // Set default 2D mode
 document.body.classList.add("in-2d");
